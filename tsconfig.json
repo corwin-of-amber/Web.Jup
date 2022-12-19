@@ -3,7 +3,7 @@
     "target": "es2020",
     "module": "esnext",
     "lib": ["es2022", "dom", "dom.iterable"],
-    "moduleResolution": "nodenext",
+    "moduleResolution": "node",
     "esModuleInterop": true,
     "downlevelIteration": true
   }
