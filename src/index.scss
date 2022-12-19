@@ -1,0 +1,28 @@
+.notebook {
+    .cell--input {
+        background: #f3f3f3;
+        border: 1px solid #ddd;
+        border-radius: 3px;
+
+        .cm-editor {
+            outline: none;
+            .cm-content {
+                font-family: Menlo, Consolas, "DejaVu Sans Mono", monospace;
+                font-size: 10pt;
+            }
+        }
+    }
+
+    .cell--output {
+        margin: 8px;
+        
+        &[data-kind='text/plain'], &[data-kind='error'] {
+            white-space: pre;
+            font-family: Menlo, Consolas, "DejaVu Sans Mono", monospace;
+            font-size: 10pt;
+        }
+        &[data-kind='error'] {
+            font-size: 8pt;
+        }
+    }
+}

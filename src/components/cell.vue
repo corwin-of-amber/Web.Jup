@@ -1,17 +1,11 @@
 <template>
     <div class="cell">
         <div class="cell--input" ref="input"></div>
-        <div class="cell--output" v-for="out in model.outputs">
+        <div class="cell--output" v-for="out in model.outputs" :data-kind="out.kind">
             <div class="payload">{{ out.payload }}</div>
         </div>
     </div>
 </template>
-
-<style scoped>
-.cell-output > .payload {
-    white-space: pre;
-}
-</style>
 
 <script lang="ts">
 import { CodeEditor } from './editor';
@@ -21,6 +15,7 @@ export default {
     mounted() {
         this.editor = new CodeEditor(this.$refs.input, this.model.input);
         this.editor.on('change', () => this.updateModel());
+        this.editor.on('action', a => this.$emit('action', a));
         this.$watch(() => this.model.input, v => {
             if (!this._isUpdating) {
                 console.warn('--set editor', this.model);

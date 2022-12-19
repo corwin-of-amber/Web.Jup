@@ -1,12 +1,13 @@
 <template>
     <div class="notebook">
         <div v-for="cell in model.cells">
-            <cell :model="cell" :ref="register"/>
+            <cell :model="cell" :ref="register" @action="cellAction(cell, $event)"/>
         </div>
     </div>
 </template>
 
 <script lang="ts">
+import { NotebookApp } from '../app';
 import Cell from './cell.vue';
 
 export default {
@@ -20,6 +21,9 @@ export default {
             for (let cell of this._cells.values()) {
                 cell.updateModel();
             }
+        },
+        cellAction(cell: NotebookApp.Cell, action) {
+            this.$emit('cell:action', {cell, ...action});
         }
     },
     components: { Cell }

@@ -1,6 +1,7 @@
 
 import { NotebookApp } from './app';
 import { JupyterConnection } from './connection';
+import './index.scss';
 
 
 const SERVER = {
@@ -12,8 +13,9 @@ async function main() {
     let app = new NotebookApp();
     Object.assign(window, {app});
 
-    app.model.cells[0].input = 'print("hola")';
-    app.model.cells.push(app.mkCodeCell('6 + 7'))
+    app.model.cells[0].input = 'from z3 import *';
+    app.model.cells.push(app.mkCodeCell('x = Int("x"); x'))
+    app.model.cells.push(app.mkCodeCell('ForAll([x], x * 6 + 4 - 0)'))
 
     let jup = new JupyterConnection(SERVER).attach(app);
     Object.assign(window, {jup});
@@ -21,32 +23,6 @@ async function main() {
     await jup.start();
 
     jup.runAll();
-
-    /*
-    // Connect to the server and create a new kernel
-    kman.startNew({}).then(kernel => {
-        // Execute some code in the kernel
-        Object.assign(window, {kernel});
-
-        for (let cell of app.model.cells) {
-
-            let ksfh = kernel.requestExecute({ code: cell.input });
-            ksfh.registerMessageHook(msg => {
-                console.log(msg);
-                switch (msg.header.msg_type) {
-                case 'stream':
-                    app.writeOutput(cell, (msg as IStreamMsg).content.text);
-                    break;
-                case 'execute_result':
-                    app.addResult(cell, (msg as IExecuteResultMsg).content.data);
-                    break;
-                }
-                return true;
-            });
-        }
-
-        window.addEventListener('beforeunload', () => { kernel.dispose(); kernel.shutdown(); });
-    });*/
 }
 
 document.addEventListener('DOMContentLoaded', main);

@@ -46,8 +46,8 @@ class CodeEditor extends EventEmitter {
 
     private nav() {
         return keymap.of([
-            {key: "Shift-Enter", run: () => true},
-            {key: "Mod-Enter", run: () => true},
+            {key: "Shift-Enter", run: () => this.emit('action', {type: 'exec-fwd'})},
+            {key: "Mod-Enter", run: () => this.emit('action', {type: 'exec'})},
         ]);
     }
 }
