@@ -1,8 +1,12 @@
 <template>
     <div class="cell">
         <div class="cell--input" ref="input"></div>
-        <div class="cell--output" v-for="out in model.outputs" :data-kind="out.kind">
-            <div class="payload">{{ out.payload }}</div>
+        <div class="cell--outputs">
+            <div class="cell--output" v-for="out in model.outputs" :data-kind="out.kind">
+                <div v-if="['image/svg+xml', 'text/html'].includes(out.kind)"
+                    class="payload image" v-html="out.payload"></div>
+                <div v-else class="payload">{{ out.payload }}</div>
+            </div>
         </div>
     </div>
 </template>

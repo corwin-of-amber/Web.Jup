@@ -19,8 +19,13 @@ class JupyterConnection {
         this.kman = new KernelManager({ serverSettings });
     }
 
-    async start() {
+    async start(options: KernelStartOptions = {}) {
         this.kernel = await this.kman.startNew({});
+        if (options.wd) {
+            this.kernel.requestExecute({
+                code: `import os; os.chdir(${JSON.stringify(options.wd)})`});
+        }
+        window.addEventListener('beforeunload', () => this.kernel.shutdown());
     }
 
     attach(frontend: NotebookApp) {
@@ -45,11 +50,12 @@ class JupyterConnection {
     }
 
     formatErrorTraceback(traceback: string[]) {
-        return ansiStrip(traceback.slice(2).join('\n'));
+        // hack to remove leading '----' and 'Traceback:' lines
+        if (traceback.length > 2) traceback = traceback.slice(2);
+        return ansiStrip(traceback.join('\n'));
     }
 
     private processKernelMessage(cell: NotebookApp.Cell, msg: IIOPubMessage<IOPubMessageType>) {
-        console.log(msg);
         switch (msg.header.msg_type) {
         case 'stream':
             this.frontend.writeOutput(cell, (msg as IStreamMsg).content.text);
@@ -75,4 +81,9 @@ class JupyterConnection {
 }
 
 
-export { JupyterConnection }
+type KernelStartOptions = {
+    wd?: string
+}
+
+
+export { JupyterConnection, KernelStartOptions }

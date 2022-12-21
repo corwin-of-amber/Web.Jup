@@ -1,7 +1,7 @@
 <template>
     <div class="notebook">
-        <div v-for="cell in model.cells">
-            <cell :model="cell" :ref="register" @action="cellAction(cell, $event)"/>
+        <div v-for="cell in model.cells" :key="key(cell)">
+            <cell :model="cell" ref="cells" @action="cellAction(cell, $event)"/>
         </div>
     </div>
 </template>
@@ -11,19 +11,21 @@ import { NotebookApp } from '../app';
 import Cell from './cell.vue';
 
 export default {
-    props: ['model', 'cells'],
+    props: ['model'],
+    created() {
+        this._keys = new Map;
+    },
     methods: {
-        register(cell) {
-            this._cells ??= new Map;
-            this._cells.set(cell.model, cell);
-        },
-        updateAll() {
-            for (let cell of this._cells.values()) {
-                cell.updateModel();
-            }
-        },
         cellAction(cell: NotebookApp.Cell, action) {
             this.$emit('cell:action', {cell, ...action});
+        },
+        key(cell: NotebookApp.Cell) {
+            let v = this._keys.get(cell);
+            if (v === undefined) {
+                v = Math.max(0, ...this._keys.values()) + 1;
+                this._keys.set(cell, v);
+            }
+            return v;
         }
     },
     components: { Cell }

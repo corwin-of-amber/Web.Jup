@@ -6,23 +6,22 @@ import './index.scss';
 
 const SERVER = {
     url: 'http://localhost:2088',
-    token: 'bb58b1459207f3b6be4c90ace8cae53bf0e9084ca5946b1e'
+    token: '4e85e700f95c1b8fa3465ccf4bf9d7a5060d588883080d80'
 };
+
+const WD = '/Users/corwin/var/workspace/papers/2022/hyper_arbiter/notebooks';
+
 
 async function main() {
     let app = new NotebookApp();
     Object.assign(window, {app});
 
-    app.model.cells[0].input = 'from z3 import *';
-    app.model.cells.push(app.mkCodeCell('x = Int("x"); x'))
-    app.model.cells.push(app.mkCodeCell('ForAll([x], x * 6 + 4 - 0)'))
-
     let jup = new JupyterConnection(SERVER).attach(app);
     Object.assign(window, {jup});
 
-    await jup.start();
+    await jup.start({wd: WD});
 
-    jup.runAll();
+    app.runAll();
 }
 
 document.addEventListener('DOMContentLoaded', main);

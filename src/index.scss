@@ -1,4 +1,6 @@
 .notebook {
+    --monospace-font: Menlo, Consolas, "DejaVu Sans Mono", monospace;
+
     .cell--input {
         background: #f3f3f3;
         border: 1px solid #ddd;
@@ -7,7 +9,7 @@
         .cm-editor {
             outline: none;
             .cm-content {
-                font-family: Menlo, Consolas, "DejaVu Sans Mono", monospace;
+                font-family: var(--monospace-font);
                 font-size: 10pt;
             }
         }
@@ -15,14 +17,28 @@
 
     .cell--output {
         margin: 8px;
-        
-        &[data-kind='text/plain'], &[data-kind='error'] {
-            white-space: pre;
-            font-family: Menlo, Consolas, "DejaVu Sans Mono", monospace;
+
+        &[data-kind='text/plain'], &[data-kind='term'] {
+            white-space: pre-wrap;
+            font-family: var(--monospace-font);
             font-size: 10pt;
         }
         &[data-kind='error'] {
+            white-space: pre;
+            font-family: var(--monospace-font);
             font-size: 8pt;
         }
+    }
+
+    .cell--outputs {
+        &:empty {
+            margin-bottom: 4px;
+        }
+    }
+
+    &::after {
+        content: '';
+        display: block;
+        min-height: 400px; /* quite arbitrary */
     }
 }
