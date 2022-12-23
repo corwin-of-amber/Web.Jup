@@ -5,7 +5,7 @@
     "type": "module",
     "scripts": {
         "build": "kremlin index.html",
-        "jupyter": "jupyter-lab --port=2088 --no-browser"
+        "jupyter": "BROWSER=src/jup-hook.js jupyter-lab --port=2088"
     },
     "dependencies": {
         "@codemirror/commands": "^6.1.2",

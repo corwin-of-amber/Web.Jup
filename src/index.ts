@@ -1,4 +1,4 @@
-
+import fs from 'fs';
 import { NotebookApp } from './app';
 import { JupyterConnection } from './connection';
 import './index.scss';
@@ -6,13 +6,18 @@ import './index.scss';
 
 const SERVER = {
     url: 'http://localhost:2088',
-    token: '4e85e700f95c1b8fa3465ccf4bf9d7a5060d588883080d80'
+    token: undefined
 };
 
 const WD = '/Users/corwin/var/workspace/papers/2022/hyper_arbiter/notebooks';
 
 
 async function main() {
+    try {
+        SERVER.token ??= fs.readFileSync('.url', 'utf-8');
+    }
+    catch (e) { console.warn(e); }
+
     let app = new NotebookApp();
     Object.assign(window, {app});
 
