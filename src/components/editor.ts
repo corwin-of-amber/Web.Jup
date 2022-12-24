@@ -1,8 +1,8 @@
 import { EventEmitter } from 'events';
 import { EditorView, keymap } from '@codemirror/view';
-import { defaultKeymap, history, indentWithTab } from '@codemirror/commands';
+import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
 import { EditorState, StateField } from '@codemirror/state';
-import { syntaxHighlighting, defaultHighlightStyle } from '@codemirror/language';
+import { syntaxHighlighting, defaultHighlightStyle, indentUnit } from '@codemirror/language';
 import { python, pythonLanguage } from '@codemirror/lang-python';
 import { autocompletion, CompletionContext } from '@codemirror/autocomplete';
 
@@ -46,9 +46,10 @@ namespace Setup {
     });
     
     export const extensions = [
-        keymap.of(defaultKeymap), keymap.of([indentWithTab]),
+        keymap.of(defaultKeymap), keymap.of(historyKeymap),
+        keymap.of([indentWithTab]),
         history(),
-        syntaxHighlighting(defaultHighlightStyle),
+        syntaxHighlighting(defaultHighlightStyle), indentUnit.of('    '),
         updateListener(), nav(),
         autocompletion(),
         python(),
