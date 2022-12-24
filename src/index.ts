@@ -1,6 +1,5 @@
 import fs from 'fs';
-import { NotebookApp } from './app';
-import { JupyterConnection } from './connection';
+import { IDE } from './ide';
 import './index.scss';
 
 
@@ -18,15 +17,13 @@ async function main() {
     }
     catch (e) { console.warn(e); }
 
-    let app = new NotebookApp();
-    Object.assign(window, {app});
+    let ide = new IDE({
+        server: SERVER,
+        rootDir: WD
+    });
+    Object.assign(window, {ide});
 
-    let jup = new JupyterConnection(SERVER).attach(app);
-    Object.assign(window, {jup});
-
-    await jup.start({wd: WD});
-
-    app.runAll();
+    ide.start();
 }
 
 document.addEventListener('DOMContentLoaded', main);

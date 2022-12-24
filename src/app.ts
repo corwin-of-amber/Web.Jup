@@ -2,7 +2,7 @@ import { EventEmitter } from 'events';
 import * as Vue from 'vue';
 import { IMimeBundle } from '@jupyterlab/nbformat';
 
-import { LocalStore } from './infra/store';
+import { LocalStore, Serialization } from './infra/store';
 // @ts-ignore
 import rootComponent from './components/notebook.vue';
 
@@ -132,6 +132,48 @@ namespace NotebookApp {
         type: string
         cell: Cell
     }
+
+    /**
+     * Converts between a model and `.ipynb` JSON format
+     */
+    export class IpynbConverter implements Serialization<Model> {
+        metadata: any = {
+            "kernelspec": {
+                "display_name": "Python 3 (ipykernel)",
+                "language": "python",
+                "name": "python3"
+            }
+        }
+        version = [4, 4]
+        options = {indent: 1}
+        
+        parse(s: string): Model {
+            throw new Error('Method not implemented.');
+        }
+
+        stringify(d: Model): string {
+            return JSON.stringify(this.toJSON(d), null, this.options.indent);
+        }
+
+        toJSON(model: Model) {
+            return {
+                cells: model.cells.map(cell => ({
+                    cell_type: cell.kind,
+                    metadata: {},
+                    outputs: [],
+                    source: this.lines(cell.input)
+                })),
+                metadata: this.metadata,
+                nbformat: this.version[0],
+                nbformat_minor: this.version[1]
+            };
+        }
+
+        lines(s: string) {
+            return [...s.matchAll(/.*\n|.+$/g)].map(mo => mo[0]);
+        }
+    }
+
 }
 
 export { NotebookApp }

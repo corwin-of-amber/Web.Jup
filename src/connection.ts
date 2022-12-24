@@ -10,7 +10,7 @@ class JupyterConnection {
     kman: KernelManager
     kernel: IKernelConnection
 
-    constructor(server: {url: string, token: string}) {
+    constructor(server: {url: string, token?: string}) {
         const serverSettings = ServerConnection.makeSettings({
             baseUrl: server.url,
             token: server.token
