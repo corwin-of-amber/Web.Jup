@@ -1,7 +1,9 @@
 import path from 'path';
 import { NotebookApp } from './app';
 import { JupyterConnection } from './connection';
-import { FileStore } from './infra/store';
+import { FileStore, LocalStore } from './infra/store';
+import { KeyMap } from './infra/keymap';
+import { saveDialog } from './infra/file-dialog';
 
 
 class IDE {
@@ -14,6 +16,8 @@ class IDE {
     store: FileStore<NotebookApp.Model>
     ipynb: NotebookApp.IpynbConverter
 
+    persist = new LocalStore('ide')
+
     constructor(project: Project) {
         this.project = project;
         this.wd = this.project.rootDir;
@@ -24,6 +28,8 @@ class IDE {
 
         this.ipynb = new NotebookApp.IpynbConverter();
         this.store = new FileStore(this._untitled(), this.ipynb);
+
+        this.globalKeyMap().attach(document.body);
     }
 
     async start() {
@@ -33,12 +39,26 @@ class IDE {
 
     save(filename?: string) {
         if (filename) {
-            this.store.filename = path.join(this.wd, filename);
+            this.store.filename = path.resolve(this.wd, filename);
         }
         this.store.save(this.app.model);
     }
 
+    async saveDialog() {
+        let fn = (await saveDialog(this.store.filename)).path;
+        console.log(fn);
+        this.save(fn);
+    }
+
     _untitled() { return path.join(this.wd, 'untitled.ipynb'); }
+
+    globalKeyMap() {
+        return new KeyMap({
+            'Mod-S': () => this.save(),
+            'Shift-Mod-S': () => { this.saveDialog(); },
+            'Mod-R': () => this.app.runAll()
+        })
+    }
 }
 
 
