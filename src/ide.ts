@@ -29,7 +29,18 @@ class IDE {
         this.ipynb = new NotebookApp.IpynbConverter();
         this.store = new FileStore(this._untitled(), this.ipynb);
 
+        let s = this.persist.load() as State;
+        if (s) this.state = s;
+        window.addEventListener('beforeunload', () => this.persist.save(this.state));
+
         this.globalKeyMap().attach(document.body);
+    }
+
+    get state(): State {
+        return {filename: this.store.filename};
+    }
+    set state(v: State) {
+        if (v.filename) this.store.filename = v.filename;
     }
 
     async start() {
@@ -66,6 +77,8 @@ interface Project {
     server: {url: string, token?: string}
     rootDir: string
 }
+
+type State = {filename: string}
 
 
 export { IDE, Project }

@@ -16,6 +16,7 @@ export function saveDialog(filename: string): Promise<FileEx> {
     input.setAttribute('type', 'file');
     input.setAttribute('nwworkingdir', path.dirname(filename));
     input.setAttribute('nwsaveas', path.basename(filename));
+    input.setAttribute('accept', '.ipynb');
     return new Promise(resolve => {
         input.addEventListener('change', () => {
             if (input.files[0]) resolve(input.files[0] as FileEx);
