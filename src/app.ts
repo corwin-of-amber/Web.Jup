@@ -61,8 +61,10 @@ class NotebookApp extends EventEmitter {
     }
 
     runAll() {
-        for (let cell of this.model.cells)
-            this.runCell(cell);
+        for (let cell of this.model.cells) {
+            if (!this.cellFlags(cell).ondemand)
+                this.runCell(cell);
+        }
     }
 
     clearOutputs(cell: NotebookApp.Cell) {
@@ -108,6 +110,13 @@ class NotebookApp extends EventEmitter {
             console.warn(action)
         }
         this.emit('cell:action', action);        
+    }
+
+    cellFlags(cell: NotebookApp.Cell) {
+        /** @todo parse pragmas more systematically */
+        return {
+            ondemand: !!cell.input.match(/^#pragma ondemand/m)
+        }
     }
 }
 

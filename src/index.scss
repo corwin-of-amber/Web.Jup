@@ -45,6 +45,8 @@
     }
 
     .cell--outputs {
+        overflow: auto;
+        
         &:empty {
             margin-bottom: 4px;
         }
