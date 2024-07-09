@@ -11,12 +11,15 @@ export function saveFile(filename: string, content: string | Uint8Array) {
     setTimeout(() => URL.revokeObjectURL(ourl), EXPIRE);
 }
 
-export function saveDialog(filename: string): Promise<FileEx> {
+export function saveDialog(filename: string, ext?: string): Promise<FileEx> {
     var input = document.createElement('input');
     input.setAttribute('type', 'file');
     input.setAttribute('nwworkingdir', path.dirname(filename));
     input.setAttribute('nwsaveas', path.basename(filename));
-    input.setAttribute('accept', '.ipynb');
+    if (ext) {
+        if (!ext.startsWith('.')) ext = '.' + ext;
+        input.setAttribute('accept', ext);
+    }
     return new Promise(resolve => {
         input.addEventListener('change', () => {
             if (input.files[0]) resolve(input.files[0] as FileEx);

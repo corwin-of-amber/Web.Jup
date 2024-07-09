@@ -55,6 +55,10 @@ class JupyterConnection {
         return ansiStrip(traceback.join('\n'));
     }
 
+    userInterrupt() {
+        this.kernel.interrupt();
+    }
+
     private processKernelMessage(cell: NotebookApp.Cell, msg: IIOPubMessage<IOPubMessageType>) {
         switch (msg.header.msg_type) {
         case 'stream':

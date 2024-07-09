@@ -2,7 +2,8 @@ import { EventEmitter } from 'events';
 import { EditorView, keymap } from '@codemirror/view';
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
 import { EditorState, StateField } from '@codemirror/state';
-import { syntaxHighlighting, defaultHighlightStyle, indentUnit } from '@codemirror/language';
+import { syntaxHighlighting, defaultHighlightStyle,
+         indentUnit, bracketMatching } from '@codemirror/language';
 import { python, pythonLanguage } from '@codemirror/lang-python';
 import { autocompletion, CompletionContext } from '@codemirror/autocomplete';
 
@@ -46,13 +47,14 @@ namespace Setup {
     });
     
     export const extensions = [
+        nav(),
         keymap.of(defaultKeymap), keymap.of(historyKeymap),
         keymap.of([indentWithTab]),
         history(),
-        syntaxHighlighting(defaultHighlightStyle), indentUnit.of('    '),
-        updateListener(), nav(),
-        autocompletion(),
         python(),
+        syntaxHighlighting(defaultHighlightStyle), indentUnit.of('    '),
+        bracketMatching(), autocompletion(),
+        updateListener(),
         pythonLanguage.data.of({
             autocomplete: jupyterCompletions
         })
@@ -72,7 +74,9 @@ namespace Setup {
             {key: "Mod-Enter", run: emit('exec')},
             {key: "Ctrl-=", run: emit('insert-after')},
             {key: "Ctrl-+", run: emit('insert-before')},
-            {key: "Ctrl--", run: emit('delete')}
+            {key: "Ctrl--", run: emit('delete')},
+            // disable CodeMirror default
+            {key: "Cmd-i", run: () => true}
         ]);
     }
 

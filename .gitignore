@@ -1,9 +1,12 @@
+.DS_Store
 *.swp
 a.out
 node_modules
 /build
 /agent
 /_npmlink
+/tmp
+/packages/vuebook
 
 *.crt
 .url

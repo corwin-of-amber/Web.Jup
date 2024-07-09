@@ -8,7 +8,7 @@ const SERVER = {
     token: undefined
 };
 
-const WD = '/Users/corwin/var/workspace/papers/2022/hyper_arbiter/notebooks';
+const WD = 'tmp/scratch';
 
 
 async function main() {

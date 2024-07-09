@@ -48,6 +48,11 @@ class IDE {
         this.app.runAll();
     }
 
+    new(filename: string = this._untitled()) {
+        this.store.filename = filename;
+        this.app.new();
+    }
+
     save(filename?: string) {
         if (filename) {
             this.store.filename = path.resolve(this.wd, filename);
@@ -56,8 +61,7 @@ class IDE {
     }
 
     async saveDialog() {
-        let fn = (await saveDialog(this.store.filename)).path;
-        console.log(fn);
+        let fn = (await saveDialog(this.store.filename, '.ipynb')).path;
         this.save(fn);
     }
 
@@ -67,7 +71,8 @@ class IDE {
         return new KeyMap({
             'Mod-S': () => this.save(),
             'Shift-Mod-S': () => { this.saveDialog(); },
-            'Mod-R': () => this.app.runAll()
+            'Mod-R': () => this.app.runAll(),
+            'Mod-I': () => this.kernel.userInterrupt()
         })
     }
 }
