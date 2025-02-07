@@ -18,7 +18,6 @@ async function main() {
     catch (e) { console.warn(e); }
 
     let ide = new IDE({
-        server: SERVER,
         rootDir: WD
     });
     Object.assign(window, {ide});

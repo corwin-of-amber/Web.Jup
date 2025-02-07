@@ -24,6 +24,7 @@ export default {
             if (v === undefined) {
                 v = Math.max(0, ...this._keys.values()) + 1;
                 this._keys.set(cell, v);
+                (<any>cell).$key = v;
             }
             return v;
         }

@@ -3,7 +3,7 @@ import * as Vue from 'vue';
 import { IMimeBundle } from '@jupyterlab/nbformat';
 
 import { LocalStore, Serialization } from './infra/store';
-// @ts-ignore
+
 import { Notebook, Model, ModelImpl } from '../packages/vuebook';
 
 
@@ -11,13 +11,12 @@ class NotebookApp extends EventEmitter {
     model: ModelImpl
     view: Vue.ComponentPublicInstance
 
-    store = new LocalStore<Model.Notebook>('untitled')
-
     constructor() {
         super();
-        this.model = Vue.reactive(new ModelImpl().load());  //this.load());
+        this.load();
         let app = Vue.createApp(Notebook, {
             model: this.model,
+            options: {collapsible: false},
             'onCell:action': (action: NotebookApp.CellAction) =>
                 this.handleCellAction(action)
         });
@@ -27,15 +26,19 @@ class NotebookApp extends EventEmitter {
     }
 
     new() {
-        this.model = new ModelImpl(); // {cells: [this.mkCodeCell()]};
+        this.model = Vue.reactive(new ModelImpl().from({}));
     }
 
     load() {
-        return this.store.load() ?? {cells: [this.mkCodeCell()]};
+        this.model = Vue.reactive(new ModelImpl().load());
+    }
+
+    loadFrom(m: Model.Notebook) {
+        //this.model = this.view.model = Vue.reactive(ModelImpl.promote(m));
     }
 
     save() {
-        this.store.save(this.model);
+        this.model.save();
     }
 
     addResult(cell: Model.Cell, result: IMimeBundle) {
@@ -91,37 +94,13 @@ class NotebookApp extends EventEmitter {
         if (at >= 0) this.model.cells.splice(at, 1);
     }
 
-    mkCodeCell(code: string = ''): Model.Cell {
-        return {
-            kind: 'code',
-            input: code,
-            outputs: []
-        };
-    }
-
-    focus(cell: Model.Cell) {
+    focus(cell: Model.Cell & {$key?: any}) {
         let c = (<any[]>this.view.$refs.cells)
                 .find(v => v.model.$key === cell.$key);
         if (c) c.editor.cm.focus();
     }
 
     handleCellAction(action: NotebookApp.CellAction) {
-        /*switch (action.type) {
-        case 'exec':
-        case 'exec-fwd':        
-            this.clearOutputs(action.cell);
-            break;
-        case 'insert-after':
-            let ncell = this.mkCodeCell();
-            this.insert(action.cell, ncell, true);
-            requestAnimationFrame(() => this.focus(ncell));
-            break;
-        case 'delete':
-            this.delete(action.cell);
-            break;
-        default:
-            console.warn(action)
-        }*/
         this.emit('cell:action', action);        
     }
 
@@ -156,11 +135,20 @@ namespace NotebookApp {
         options = {indent: 1}
         
         parse(s: string): Model.Notebook {
-            throw new Error('Method not implemented.');
+            return this.fromJSON(JSON.parse(s));
         }
 
         stringify(d: Model.Notebook): string {
             return JSON.stringify(this.toJSON(d), null, this.options.indent);
+        }
+
+        fromJSON(json: any): Model.Notebook {
+            return {
+                cells: json.cells.map(cell => ({
+                    kind: cell.cell_type,
+                    input: cell.source.join('')
+                }))
+            };
         }
 
         toJSON(model: Model.Notebook) {

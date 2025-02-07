@@ -1,19 +1,26 @@
 import path from 'path';
+
+import { Model } from '../packages/vuebook';
+
 import { NotebookApp } from './app';
 import { JupyterConnection } from './connection';
 import { FileStore, LocalStore } from './infra/store';
 import { KeyMap } from './infra/keymap';
 import { saveDialog } from './infra/file-dialog';
+import { JupyterSubprocess } from './slave-process';
 
 
 class IDE {
     app: NotebookApp
-    kernel: JupyterConnection
+    jup: {
+        subproc: JupyterSubprocess,
+        conn: JupyterConnection
+    }
 
     project: Project
     wd: string
 
-    store: FileStore<NotebookApp.Model>
+    store: FileStore<Model.Notebook>
     ipynb: NotebookApp.IpynbConverter
 
     persist = new LocalStore('ide')
@@ -23,8 +30,11 @@ class IDE {
         this.wd = this.project.rootDir;
 
         this.app = new NotebookApp();
-        this.kernel = new JupyterConnection(this.project.server)
-        this.kernel.attach(this.app);
+        this.jup = {
+            subproc: new JupyterSubprocess({port: 2088}),
+            conn: new JupyterConnection
+        };
+        this.jup.conn.attach(this.app);
 
         this.ipynb = new NotebookApp.IpynbConverter();
         this.store = new FileStore(this._untitled(), this.ipynb);
@@ -44,7 +54,8 @@ class IDE {
     }
 
     async start() {
-        await this.kernel.start({wd: this.wd});
+        this.jup.conn.connect(await this.jup.subproc.connectionInfo.promise)
+        await this.jup.conn.start({wd: this.wd});
         this.app.runAll();
     }
 
@@ -72,14 +83,14 @@ class IDE {
             'Mod-S': () => this.save(),
             'Shift-Mod-S': () => { this.saveDialog(); },
             'Mod-R': () => this.app.runAll(),
-            'Mod-I': () => this.kernel.userInterrupt()
+            'Mod-I': () => this.jup.conn.userInterrupt()
         })
     }
 }
 
 
 interface Project {
-    server: {url: string, token?: string}
+    server?: {url: string, token?: string}
     rootDir: string
 }
 
