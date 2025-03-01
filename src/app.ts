@@ -16,7 +16,7 @@ class NotebookApp extends EventEmitter {
         this.load();
         let app = Vue.createApp(Notebook, {
             model: this.model,
-            options: {collapsible: false},
+            options: {collapsible: false, editor: {completions: [{label: 'print'}]}},
             'onCell:action': (action: NotebookApp.CellAction) =>
                 this.handleCellAction(action)
         });
@@ -34,6 +34,8 @@ class NotebookApp extends EventEmitter {
     }
 
     loadFrom(m: Model.Notebook) {
+        /** @todo */
+        throw new Error('not implemented');
         //this.model = this.view.model = Vue.reactive(ModelImpl.promote(m));
     }
 
@@ -41,6 +43,9 @@ class NotebookApp extends EventEmitter {
         this.model.save();
     }
 
+    /**
+     * Invoked by the Jupyter backend when computation completes.
+     */
     addResult(cell: Model.Cell, result: IMimeBundle) {
         let viewable = ['image/svg+xml', 'text/html', 'text/plain'];
         for (let kind of viewable) {
@@ -52,6 +57,10 @@ class NotebookApp extends EventEmitter {
         }
     }
 
+    /**
+     * Invoked by the Jupyter backend when computation fails with
+     * an error.
+     */
     addError(cell: Model.Cell, error: string) {
         cell.outputs.push({kind: 'error', payload: error});
     }
@@ -83,7 +92,7 @@ class NotebookApp extends EventEmitter {
            after: boolean = false) {
         if (typeof at !== 'number') {
             at = this.model.cells.indexOf(at);
-            if (at < 0) this.model.cells.length;
+            if (at < 0) at = this.model.cells.length;
             else if (after) at++;
         }
         this.model.cells.splice(at, 0, newCell);

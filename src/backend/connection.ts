@@ -1,10 +1,11 @@
 import { ServerConnection, KernelManager } from '@jupyterlab/services';
 import { IKernelConnection } from '@jupyterlab/services/lib/kernel/kernel';
-import { IErrorMsg, IExecuteResultMsg, IIOPubMessage, IOPubMessageType, IStreamMsg } from '@jupyterlab/services/lib/kernel/messages';
+import { IErrorMsg, IExecuteReply, IExecuteResultMsg, IIOPubMessage, IOPubMessageType, IStreamMsg } from '@jupyterlab/services/lib/kernel/messages';
 import ansiStrip from 'strip-ansi';
+import unescapeJs from 'unescape-js';
 
-import { NotebookApp } from './app';
-import { Model } from '../packages/vuebook';
+import { Model } from '../../packages/vuebook';
+import type { NotebookApp } from '../app';
 
 
 class JupyterConnection {
@@ -26,10 +27,7 @@ class JupyterConnection {
 
     async start(options: KernelStartOptions = {}) {
         this.kernel = await this.kman.startNew({});
-        if (options.wd) {
-            this.kernel.requestExecute({
-                code: `import os; os.chdir(${JSON.stringify(options.wd)})`});
-        }
+        if (options.wd) this.chdir(options.wd);
         window.addEventListener('beforeunload', () => this.kernel.shutdown());
     }
 
@@ -62,6 +60,35 @@ class JupyterConnection {
 
     userInterrupt() {
         this.kernel.interrupt();
+    }
+
+    async chdir(wd: string) {
+        await this.kernel.requestExecute({
+            code: `import os; os.chdir(${JSON.stringify(wd)})`
+        }).done;
+    }
+
+    async eval(expr: string) {
+        let p = await this.kernel.requestExecute({
+            code: '',
+            user_expressions: {v: expr},
+            silent: true,
+            allow_stdin: false
+        }).done;
+        return (p.content as IExecuteReply).user_expressions['v'];
+    }
+
+    async evalJson(expr: string) {
+        let v = await this.eval(`__import__('json').dumps(${expr})`);
+        switch (v['status']) {
+        case 'error':
+            throw new Error(`${v['ename']}: ${v['evalue']}`);
+        case 'ok':
+            let text = v?.['data']?.['text/plain'];
+            if (typeof text === 'string')
+                return JSON.parse(unescapeJs(text.slice(1, -1)));
+        }
+        throw new Error(`invalid eval response from kernel`);
     }
 
     private processKernelMessage(cell: Model.Cell, msg: IIOPubMessage<IOPubMessageType>) {

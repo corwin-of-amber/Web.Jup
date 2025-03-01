@@ -1,26 +1,33 @@
 import child_process from 'child_process';
-import { Future } from './infra/future';
+import { Future } from '../infra/future';
 
 
 class JupyterSubprocess {
 
+    settings: JupyterSubprocess.Settings
+
     proc: child_process.ChildProcess
     connectionInfo: Future<URL>
 
-    constructor(settings: {port: number}) {
-        this.proc = child_process.spawn('jupyter-lab', 
-            [`--port=${settings.port}`, '--no-browser']);
-
+    constructor(settings: JupyterSubprocess.Settings) {
+        this.settings = settings;
         this.connectionInfo = new Future;
-
-        let td = new TextDecoder();
-        this.proc.stderr.on('data', buf => this._handle(td.decode(buf)));
 
         window.addEventListener('beforeunload', () => this.cleanup());
     }
 
+    start(): Promise<URL> {
+        this.proc = child_process.spawn('jupyter-lab', 
+            [`--port=${this.settings.port}`, '--no-browser']);
+
+        let td = new TextDecoder();
+        this.proc.stderr.on('data', buf => this._handle(td.decode(buf)));
+
+        return this.connectionInfo.promise;
+    }
+
     cleanup() {
-        this.proc.kill();
+        this.proc?.kill();
     }
 
     _handle(log: string) {
@@ -35,6 +42,13 @@ class JupyterSubprocess {
             }
         }
     }
+}
+
+
+namespace JupyterSubprocess {
+
+    export type Settings = {port: number}
+
 }
 
 

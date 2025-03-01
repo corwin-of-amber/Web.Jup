@@ -5,7 +5,7 @@
     "type": "module",
     "scripts": {
         "build": "kremlin index.html",
-        "jupyter": "BROWSER=src/jup-hook.js jupyter-lab --port=2088"
+        "jupyter": "BROWSER=src/etc/jup-hook.js jupyter-lab --port=2088"
     },
     "dependencies": {
         "@codemirror/commands": "^6.1.2",
@@ -15,9 +15,11 @@
         "@codemirror/view": "^6.7.1",
         "@jupyterlab/services": "^6.5.2",
         "strip-ansi": "^7.0.1",
+        "unescape-js": "^1.1.4",
         "vue": "^3.2.47"
     },
     "devDependencies": {
-        "@types/node": "^18.11.17"
+        "@types/node": "^18.11.17",
+        "@types/unescape-js": "^1.0.3"
     }
 }

@@ -3,11 +3,11 @@ import path from 'path';
 import { Model } from '../packages/vuebook';
 
 import { NotebookApp } from './app';
-import { JupyterConnection } from './connection';
 import { FileStore, LocalStore } from './infra/store';
 import { KeyMap } from './infra/keymap';
 import { saveDialog } from './infra/file-dialog';
-import { JupyterSubprocess } from './slave-process';
+import { JupyterConnection } from './backend/connection';
+import { JupyterSubprocess } from './backend/slave-process';
 
 
 class IDE {
@@ -54,8 +54,15 @@ class IDE {
     }
 
     async start() {
-        this.jup.conn.connect(await this.jup.subproc.connectionInfo.promise)
-        await this.jup.conn.start({wd: this.wd});
+        let url = await this.jup.subproc.start();
+        this.jup.conn.connect(url);
+        while (true) {
+            try {
+                await this.jup.conn.start({wd: this.wd});
+                break;
+            }
+            catch (e) { console.log('retry'); await delay(500); }
+        }
         this.app.runAll();
     }
 
@@ -87,6 +94,9 @@ class IDE {
         })
     }
 }
+
+const delay = (ms: number) =>
+    new Promise(resolve => setTimeout(resolve, ms));
 
 
 interface Project {
