@@ -1,3 +1,5 @@
+import assert from 'assert';
+
 import { ServerConnection, KernelManager } from '@jupyterlab/services';
 import { IKernelConnection } from '@jupyterlab/services/lib/kernel/kernel';
 import { IErrorMsg, IExecuteReply, IExecuteResultMsg, IIOPubMessage, IOPubMessageType, IStreamMsg } from '@jupyterlab/services/lib/kernel/messages';
@@ -9,26 +11,41 @@ import type { NotebookApp } from '../app';
 
 
 class JupyterConnection {
-    frontend: NotebookApp
+    server: Partial<ServerConnection.ISettings>
     kman: KernelManager
     kernel: IKernelConnection
 
-    connect(server: URL | {baseUrl: string, token?: string}) {
-        if (server instanceof URL)
-            server = {
+    frontend: NotebookApp
+
+    constructor(server: URL | {baseUrl: string, token?: string}) {
+        this.server = (server instanceof URL) ? {
                 baseUrl: server.origin,
                 token: server.searchParams.get('token')
-            };
-        
+            } :  server;
+
+        window.addEventListener('beforeunload', () => this.destroy());
+    }
+
+    connect() {
+        assert(!this.kman);
         this.kman = new KernelManager({
-            serverSettings: ServerConnection.makeSettings(server)
+            serverSettings: ServerConnection.makeSettings(this.server)
         });
     }
 
     async start(options: KernelStartOptions = {}) {
+        if (!this.kman) this.connect();
+        return retries(() => this.startTry(options), 500);
+    }
+
+    async startTry(options: KernelStartOptions = {}) {
         this.kernel = await this.kman.startNew({});
         if (options.wd) this.chdir(options.wd);
-        window.addEventListener('beforeunload', () => this.kernel.shutdown());
+    }
+
+    async destroy() {
+        await this.kernel?.shutdown();
+        this.kman.dispose();
     }
 
     attach(frontend: NotebookApp) {
@@ -119,6 +136,19 @@ class JupyterConnection {
 
 type KernelStartOptions = {
     wd?: string
+}
+
+
+const delay = (ms: number) =>
+    new Promise(resolve => setTimeout(resolve, ms));
+
+async function retries<T>(op: () => Promise<T>, wait: number): Promise<T> {
+    while (true) {
+        try {
+            return await op();
+        }
+        catch (e) { console.log('retry'); await delay(wait); }
+    }
 }
 
 

@@ -32,9 +32,8 @@ class IDE {
         this.app = new NotebookApp();
         this.jup = {
             subproc: new JupyterSubprocess({port: 2088}),
-            conn: new JupyterConnection
+            conn: undefined
         };
-        this.jup.conn.attach(this.app);
 
         this.ipynb = new NotebookApp.IpynbConverter();
         this.store = new FileStore(this._untitled(), this.ipynb);
@@ -55,14 +54,9 @@ class IDE {
 
     async start() {
         let url = await this.jup.subproc.start();
-        this.jup.conn.connect(url);
-        while (true) {
-            try {
-                await this.jup.conn.start({wd: this.wd});
-                break;
-            }
-            catch (e) { console.log('retry'); await delay(500); }
-        }
+        this.jup.conn = new JupyterConnection(url);
+        this.jup.conn.attach(this.app);
+        await this.jup.conn.start();
         this.app.runAll();
     }
 
@@ -94,9 +88,6 @@ class IDE {
         })
     }
 }
-
-const delay = (ms: number) =>
-    new Promise(resolve => setTimeout(resolve, ms));
 
 
 interface Project {
