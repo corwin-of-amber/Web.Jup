@@ -2,59 +2,72 @@ import { EventEmitter } from 'events';
 import * as Vue from 'vue';
 import { IMimeBundle } from '@jupyterlab/nbformat';
 
-import { LocalStore, Serialization } from './infra/store';
+import { QualifiedLocalStore, Serialization } from './infra/store';
 
 import { Notebook, Model, ModelImpl } from '../packages/vuebook';
+import { Status } from '@jupyterlab/services/lib/kernel/messages';
+import atexit from './infra/atexit';
 
 
 class NotebookApp extends EventEmitter {
     model: ModelImpl
+
+    instance: Vue.App
     view: Vue.ComponentPublicInstance
+    _container: HTMLElement
+
+    store = new QualifiedLocalStore<Model.Notebook>("workbook");
 
     constructor() {
         super();
+        this._container = document.body;
         this.load();
-        let app = Vue.createApp(Notebook, {
+        atexit(() => this.save(), this);
+    }
+
+    _create() {
+        this.instance?.unmount();
+
+        this.instance = Vue.createApp(Notebook, {
             model: this.model,
             options: {collapsible: false, editor: {completions: [{label: 'print'}]}},
             'onCell:action': (action: NotebookApp.CellAction) =>
                 this.handleCellAction(action)
         });
-        this.view = app.mount('body');
-
-        window.addEventListener('beforeunload', () => this.save());
+        this.view = this.instance.mount(this._container);
     }
 
     new() {
         this.model = Vue.reactive(new ModelImpl().from({}));
+        this._create();
     }
 
     load() {
-        this.model = Vue.reactive(new ModelImpl().load());
+        this.model = Vue.reactive(new ModelImpl().from(this.store.load()));
+        this._create();
     }
 
     loadFrom(m: Model.Notebook) {
-        /** @todo */
-        throw new Error('not implemented');
-        //this.model = this.view.model = Vue.reactive(ModelImpl.promote(m));
+        this.model = Vue.reactive(ModelImpl.promote(m));
+        this._create();
     }
 
     save() {
-        this.model.save();
+        this.store.save(this.model.to());
+    }
+
+    /**
+     * Invoked by Jupyter backend when execution starts/finishes.
+     */
+    setStatus(cell: Model.Cell, status: Status) {
+        cell.loading = status !== 'idle';
     }
 
     /**
      * Invoked by the Jupyter backend when computation completes.
      */
     addResult(cell: Model.Cell, result: IMimeBundle) {
-        let viewable = ['image/svg+xml', 'text/html', 'text/plain'];
-        for (let kind of viewable) {
-            let payload = result[kind];
-            if (typeof payload === 'string') {
-                cell.outputs.push({kind, payload})
-                break;
-            }
-        }
+        this.model.addResult(cell, result);
     }
 
     /**
@@ -62,18 +75,14 @@ class NotebookApp extends EventEmitter {
      * an error.
      */
     addError(cell: Model.Cell, error: string) {
-        cell.outputs.push({kind: 'error', payload: error});
+        this.model.addError(cell, error);
     }
 
     writeOutput(cell: Model.Cell, text: string) {
-        cell.outputs ??= [];
-        let term = cell.outputs.find(o => o.kind === 'term');
-        if (!term) cell.outputs.push(term = {kind: 'term', payload: ''});
-        term.payload += text;
+        this.model.writeOutput(cell, text);
     }
 
     runCell(cell: Model.Cell) {
-        this.model.clearOutputs(cell);
         this.handleCellAction({type: 'exec', cell});
     }
 
@@ -155,7 +164,8 @@ namespace NotebookApp {
             return {
                 cells: json.cells.map(cell => ({
                     kind: cell.cell_type,
-                    input: cell.source.join('')
+                    input: cell.source.join(''),
+                    outputs: []
                 }))
             };
         }

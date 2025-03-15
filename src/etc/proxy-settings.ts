@@ -12,12 +12,12 @@ async function proxySetup() {
     return new Promise(resolve => {
         chrome.proxy.settings.set({
             value: {
-            mode: "pac_script",
-            pacScript: {
-                data: "function FindProxyForURL (url, host) {\n" +
-                FIND_PROXY +
-                "}"
-            }
+                mode: "pac_script",
+                pacScript: {
+                    data: "function FindProxyForURL (url, host) {\n" +
+                        FIND_PROXY +
+                    "}"
+                }
             },
             scope: 'regular'
         }, resolve);

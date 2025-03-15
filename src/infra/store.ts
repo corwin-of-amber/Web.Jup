@@ -6,6 +6,11 @@ interface Serialization<Doc = any> {
     stringify(d: Doc): string
 }
 
+const NOP = new class implements Serialization<string> {
+    parse(s: string) { return s; }
+    stringify(s: string) { return s; }
+}
+
 class VersionedSerialization<Doc = any> implements Serialization<Doc> {
     inner: Serialization<{version: string, data: Doc}>
     version: string
@@ -71,6 +76,23 @@ class LocalStore<Doc = any> implements StoreBase<Doc> {
 }
 
 
+class QualifiedLocalStore<Doc = any> extends LocalStore<Doc> {
+    constructor(key: string, ser: Serialization<Doc> = DEFAULT_SER) {
+        super(null, ser);
+        this.key = this.qualify(key); // yes, this is not best
+    }
+
+    qualify(key: string) {
+        return this.prefix + key;
+    }
+
+    get prefix() {
+        let p = window['store:prefix'];
+        return (typeof p === 'string') ? `${p}:` : '';
+    }
+}
+
+
 class FileStore<Doc = any> implements StoreBase<Doc> {
     ser: Serialization
     filename: string
@@ -92,6 +114,34 @@ class FileStore<Doc = any> implements StoreBase<Doc> {
 }
 
 
+class VersionedStore<Doc, W extends StoreBase<Versioned<string>> = StoreBase<Versioned<string>>>
+        implements StoreBase<Doc> {
+
+    inner: W
+    ser: Serialization<Doc>
+    current: {timestamp: number, revision: number}
+
+    constructor(inner: W, ser: Serialization<Doc> = DEFAULT_SER) {
+        this.inner = inner;
+        this.ser = ser;
+    }
+
+    load(): Doc {
+        let d = this.inner.load();
+        /** @todo update this.current */
+        return this.ser.parse(d.data);
+    }
+
+    save(d: Doc) {
+        let data = this.ser.stringify(d);
+        /** @todo actual metadata */
+        this.inner.save({timestamp: 0, revision: 0, data});
+    }
+}
+
+type Versioned<Doc> = {timestamp: number, revision: number, data: Doc};
+
+
 function persistField<T>(obj: T, key: keyof T, store: StoreBase<any>) {
     var v = store.load();
     if (v !== undefined) obj[key] = v;
@@ -102,4 +152,5 @@ function persistField<T>(obj: T, key: keyof T, store: StoreBase<any>) {
 }
 
 
-export { Serialization, StoreBase, LocalStore, FileStore, DEFAULT_SER, persistField }
+export { Serialization, NOP, StoreBase, LocalStore, QualifiedLocalStore,
+         FileStore, VersionedStore, Versioned, DEFAULT_SER, persistField }

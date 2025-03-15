@@ -1,47 +1,72 @@
-import fs from 'fs';
 import { IDE } from './ide';
 import './index.scss';
 
-import { CodeEditor } from '../packages/vuebook';
-
 import { proxySetup } from './etc/proxy-settings';
+import { JupyterHosts } from './backend/hosts';
+import { LocalStore, NOP, VersionedStore } from './infra/store';
 
 
-const SERVER = {
-    url: 'http://localhost:2088',
-    token: undefined
-};
+declare var nw: any;
 
 const WD = 'tmp/scratch';
 
 
-async function main() {
-    try {
-        SERVER.token ??= fs.readFileSync('.url', 'utf-8');
+class ApplicationWindows {
+    role: Role
+
+    constructor(role: Role) {
+        this.role = role;
+        switch (this.role) {
+            case 'master':
+                this.broadcast({type: 'startup'}); break;
+            case 'slave':
+                window.addEventListener('message', m =>
+                    this.handleSlave(m));
+                break;
+        }
     }
-    catch (e) { console.warn(e); }
+
+    broadcast(msg: any) {
+        nw.Window.getAll((wins: Iterable<{window: Window}>) => {
+            for (let w of wins) {
+                w.window.postMessage(msg, '*');
+            }
+        });
+    }
+
+    handleSlave(m: {data: any}) {
+        console.log(m.data);
+        switch (m.data.type) {
+            case 'startup': window.location.reload(); break;
+        }
+    }
+}
+
+type Role = 'master' | 'slave';
+
+
+async function main() {
+    let sp = new URLSearchParams(location.search);
+    let slave = sp.has('slave');
+
+    let appwins = new ApplicationWindows(slave ? 'slave' : 'master');
+    if (slave)
+        window['store:prefix'] = 'slave';
 
     proxySetup().then(() => console.log('PROXY SET'));
+
+    let hosts = JupyterHosts.fromFile('tmp/jups');
+    hosts.refresh();
 
     let ide = new IDE({
         rootDir: WD
     });
-    Object.assign(window, {ide});
+    Object.assign(window, {ide, hosts, appwins});
 
-    ide.start();
-
-    CodeEditor.lookupCompletions = {
-        async get(prefix: string, word: string) {
-            try {
-                var e = await ide.jup.conn.evalJson(`dir(${prefix})`);
-            }
-            catch {
-                return undefined;
-            }
-            if (!word.startsWith('_'))
-                e = e.filter(w => !w.startsWith('_'));
-            return e.map(w => ({label: w}));
-        }
+    if (!slave) {
+        ide.prerun =
+            new VersionedStore(new LocalStore('slave:expose', JSON), NOP);
+        ide.start();
     }
 }
 

@@ -2,6 +2,7 @@
 *.swp
 a.out
 node_modules
+/.*
 /build
 /agent
 /_npmlink

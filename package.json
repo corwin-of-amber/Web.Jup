@@ -14,11 +14,13 @@
         "@codemirror/state": "^6.1.4",
         "@codemirror/view": "^6.7.1",
         "@jupyterlab/services": "^6.5.2",
+        "lodash": "^4.17.21",
         "strip-ansi": "^7.0.1",
         "unescape-js": "^1.1.4",
         "vue": "^3.2.47"
     },
     "devDependencies": {
+        "@types/lodash": "^4.17.16",
         "@types/node": "^18.11.17",
         "@types/unescape-js": "^1.0.3"
     }

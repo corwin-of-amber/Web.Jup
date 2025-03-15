@@ -1,13 +1,17 @@
 import path from 'path';
 
-import { Model } from '../packages/vuebook';
+import { Model, CodeEditor } from '../packages/vuebook';
 
 import { NotebookApp } from './app';
-import { FileStore, LocalStore } from './infra/store';
+import { StoreBase, FileStore, QualifiedLocalStore, VersionedStore,
+         Serialization } from './infra/store';
 import { KeyMap } from './infra/keymap';
 import { saveDialog } from './infra/file-dialog';
 import { JupyterConnection } from './backend/connection';
 import { JupyterSubprocess } from './backend/slave-process';
+import { JupyterHosts } from './backend/hosts';
+import { JupyterAutocomplete } from './autocomplete';
+import atexit from './infra/atexit';
 
 
 class IDE {
@@ -22,8 +26,9 @@ class IDE {
 
     store: FileStore<Model.Notebook>
     ipynb: NotebookApp.IpynbConverter
+    prerun: StoreBase<string>
 
-    persist = new LocalStore('ide')
+    persist = new QualifiedLocalStore('ide')
 
     constructor(project: Project) {
         this.project = project;
@@ -40,7 +45,7 @@ class IDE {
 
         let s = this.persist.load() as State;
         if (s) this.state = s;
-        window.addEventListener('beforeunload', () => this.persist.save(this.state));
+        atexit(() => this.persist.save(this.state), this);
 
         this.globalKeyMap().attach(document.body);
     }
@@ -54,10 +59,22 @@ class IDE {
 
     async start() {
         let url = await this.jup.subproc.start();
-        this.jup.conn = new JupyterConnection(url);
+        await this.connectTo(new JupyterConnection(url));
+    }
+
+    async switchToRemote(host: JupyterHosts.RuntimeInfo) {
+        await this.jup.conn?.destroy();
+        await this.connectTo(new JupyterConnection(
+            {baseUrl: host.url, token: host.token}));
+    }
+
+    async connectTo(conn: JupyterConnection) {
+        this.jup.conn = conn;
         this.jup.conn.attach(this.app);
-        await this.jup.conn.start();
-        this.app.runAll();
+        await this.jup.conn.start({wd: this.wd, prerun: this.prerun});
+        // configure editor (this is global)
+        CodeEditor.lookupCompletions =
+            new JupyterAutocomplete(this.jup.conn);
     }
 
     new(filename: string = this._untitled()) {
@@ -65,16 +82,46 @@ class IDE {
         this.app.new();
     }
 
+    load(filename: string) {
+        this.store.filename = path.resolve(this.wd, filename);
+        this.app.loadFrom(this.store.load());
+    }
+
     save(filename?: string) {
         if (filename) {
             this.store.filename = path.resolve(this.wd, filename);
         }
-        this.store.save(this.app.model);
+        this.store.save(this.app.model.to());
+        this.expose(); /** @todo not always? */
     }
 
     async saveDialog() {
         let fn = (await saveDialog(this.store.filename, '.ipynb')).path;
         this.save(fn);
+    }
+
+    export(filename: string, format?: 'py' | 'ipynb') {
+        let ser: Serialization<Model.Notebook>
+        format ??= filename.match(/[.]([^.]+)$/)?.[1] as any;
+        switch (format) {
+            case 'py':
+                ser = new Model.PythonScriptConverter(); break;
+            case 'ipynb':
+                ser = new Model.IpynbConverter(); break;
+            default:
+                throw new Error(format ? `unrecognized format '${format}' for '${filename}'`
+                                       : `cannot detect format for '${filename}'`)
+        }
+
+        new FileStore<Model.Notebook>(filename, ser).save(this.app.model);
+    }
+
+    expose() {
+        let ser = new Model.PythonScriptConverter,
+            store = new VersionedStore(
+                        new QualifiedLocalStore("expose", JSON), ser);
+
+        store.save(this.app.model);
     }
 
     _untitled() { return path.join(this.wd, 'untitled.ipynb'); }

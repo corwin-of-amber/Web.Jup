@@ -1,13 +1,15 @@
 import assert from 'assert';
 
-import { ServerConnection, KernelManager } from '@jupyterlab/services';
+import { ServerConnection, KernelManager, KernelMessage } from '@jupyterlab/services';
 import { IKernelConnection } from '@jupyterlab/services/lib/kernel/kernel';
-import { IErrorMsg, IExecuteReply, IExecuteResultMsg, IIOPubMessage, IOPubMessageType, IStreamMsg } from '@jupyterlab/services/lib/kernel/messages';
+import { IErrorMsg, IExecuteReply, IExecuteResultMsg, IIOPubMessage, IOPubMessageType, IStatusMsg, IStreamMsg } from '@jupyterlab/services/lib/kernel/messages';
 import ansiStrip from 'strip-ansi';
 import unescapeJs from 'unescape-js';
 
 import { Model } from '../../packages/vuebook';
 import type { NotebookApp } from '../app';
+import { StoreBase } from '../infra/store';
+import atexit from '../infra/atexit';
 
 
 class JupyterConnection {
@@ -17,13 +19,15 @@ class JupyterConnection {
 
     frontend: NotebookApp
 
+    prerun: StoreBase<string> 
+
     constructor(server: URL | {baseUrl: string, token?: string}) {
         this.server = (server instanceof URL) ? {
                 baseUrl: server.origin,
                 token: server.searchParams.get('token')
             } :  server;
 
-        window.addEventListener('beforeunload', () => this.destroy());
+        atexit(() => this.destroy(), this);
     }
 
     connect() {
@@ -40,18 +44,22 @@ class JupyterConnection {
 
     async startTry(options: KernelStartOptions = {}) {
         this.kernel = await this.kman.startNew({});
+        if (options.prerun) this.prerun = options.prerun;
         if (options.wd) this.chdir(options.wd);
     }
 
     async destroy() {
-        await this.kernel?.shutdown();
-        this.kman.dispose();
+        if (this.kman) {
+            await this.kernel?.shutdown();
+            this.kman.dispose();
+        }
+        this.kman = undefined;
     }
 
     attach(frontend: NotebookApp) {
         this.frontend = frontend;
         this.frontend.on('cell:action', action =>
-            this.handleCellAction(action));
+            this.kman && this.handleCellAction(action));
         return this;
     }
 
@@ -85,6 +93,15 @@ class JupyterConnection {
         }).done;
     }
 
+    async exec(code: string, options: Partial<KernelMessage.IExecuteRequestMsg['content']> = {}) {
+        return await this.kernel.requestExecute({
+            code,
+            silent: true,
+            allow_stdin: false,
+            ...options
+        }).done;
+    }
+
     async eval(expr: string) {
         let p = await this.kernel.requestExecute({
             code: '',
@@ -110,6 +127,9 @@ class JupyterConnection {
 
     private processKernelMessage(cell: Model.Cell, msg: IIOPubMessage<IOPubMessageType>) {
         switch (msg.header.msg_type) {
+        case 'status':
+            this.frontend.setStatus(cell, (msg as IStatusMsg).content.execution_state);
+            break;
         case 'stream':
             this.frontend.writeOutput(cell, (msg as IStreamMsg).content.text);
             break;
@@ -127,6 +147,7 @@ class JupyterConnection {
         switch (action.type) {
         case 'exec':
         case 'exec-fwd':
+            if (this.prerun) this.exec(this.prerun.load());
             this.runCell(action.cell);
             break;
         }
@@ -136,6 +157,7 @@ class JupyterConnection {
 
 type KernelStartOptions = {
     wd?: string
+    prerun?: StoreBase<string>
 }
 
 
