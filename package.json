@@ -22,6 +22,7 @@
     "devDependencies": {
         "@types/lodash": "^4.17.16",
         "@types/node": "^18.11.17",
-        "@types/unescape-js": "^1.0.3"
+        "@types/unescape-js": "^1.0.3",
+        "vue-facing-decorator": "^3.0.4"
     }
 }

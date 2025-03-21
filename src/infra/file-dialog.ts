@@ -11,21 +11,42 @@ export function saveFile(filename: string, content: string | Uint8Array) {
     setTimeout(() => URL.revokeObjectURL(ourl), EXPIRE);
 }
 
-export function saveDialog(filename: string, ext?: string): Promise<FileEx> {
-    var input = document.createElement('input');
-    input.setAttribute('type', 'file');
-    input.setAttribute('nwworkingdir', path.dirname(filename));
-    input.setAttribute('nwsaveas', path.basename(filename));
-    if (ext) {
-        if (!ext.startsWith('.')) ext = '.' + ext;
-        input.setAttribute('accept', ext);
+
+class FileInputElement {
+    el: HTMLInputElement
+
+    constructor(filename?: string, ext?: string) {
+        var input = document.createElement('input');
+        input.setAttribute('type', 'file');
+        if (filename) {
+            input.setAttribute('nwworkingdir', path.dirname(filename));
+            input.setAttribute('nwsaveas', path.basename(filename));
+        }
+        if (ext) {
+            if (!ext.startsWith('.')) ext = '.' + ext;
+            input.setAttribute('accept', ext);
+        }
+        this.el = input;
     }
-    return new Promise(resolve => {
-        input.addEventListener('change', () => {
-            if (input.files[0]) resolve(input.files[0] as FileEx);
+
+    get(): Promise<FileEx> {
+        let el = this.el;
+        return new Promise(resolve => {
+            el.addEventListener('change', () => {
+                if (el.files[0]) resolve(el.files[0] as FileEx);
+            });
+            el.click();
         });
-        input.click();
-    });
+    }
+
+}
+
+export function saveDialog(filename: string, ext?: string): Promise<FileEx> {
+    return new FileInputElement(filename, ext).get();
+}
+
+export function openDialog(ext?: string): Promise<FileEx> {
+    return new FileInputElement(undefined, ext).get();
 }
 
 /** extended file info returned from NWjs */

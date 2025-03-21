@@ -4,7 +4,8 @@ import { IMimeBundle } from '@jupyterlab/nbformat';
 
 import { QualifiedLocalStore, Serialization } from './infra/store';
 
-import { Notebook, Model, ModelImpl } from '../packages/vuebook';
+import { Model, ModelImpl } from '../packages/vuebook';
+import App, { IApp } from './components/app.vue';
 import { Status } from '@jupyterlab/services/lib/kernel/messages';
 import atexit from './infra/atexit';
 
@@ -13,43 +14,37 @@ class NotebookApp extends EventEmitter {
     model: ModelImpl
 
     instance: Vue.App
-    view: Vue.ComponentPublicInstance
-    _container: HTMLElement
+    view: IApp
 
     store = new QualifiedLocalStore<Model.Notebook>("workbook");
 
     constructor() {
         super();
-        this._container = document.body;
+        this._createUI(document.body);
         this.load();
         atexit(() => this.save(), this);
     }
 
-    _create() {
-        this.instance?.unmount();
-
-        this.instance = Vue.createApp(Notebook, {
-            model: this.model,
-            options: {collapsible: false, editor: {completions: [{label: 'print'}]}},
-            'onCell:action': (action: NotebookApp.CellAction) =>
-                this.handleCellAction(action)
+    _createUI(container: HTMLElement) {
+        this.instance = Vue.createApp(App, {
+            companion: this
         });
-        this.view = this.instance.mount(this._container);
+        this.view = this.instance.mount(container) as IApp;
     }
 
     new() {
         this.model = Vue.reactive(new ModelImpl().from({}));
-        this._create();
+        this.view.model = this.model;
     }
 
     load() {
         this.model = Vue.reactive(new ModelImpl().from(this.store.load()));
-        this._create();
+        this.view.model = this.model;
     }
 
     loadFrom(m: Model.Notebook) {
         this.model = Vue.reactive(ModelImpl.promote(m));
-        this._create();
+        this.view.model = this.model;
     }
 
     save() {

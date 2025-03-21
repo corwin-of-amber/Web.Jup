@@ -6,7 +6,7 @@ import { NotebookApp } from './app';
 import { StoreBase, FileStore, QualifiedLocalStore, VersionedStore,
          Serialization } from './infra/store';
 import { KeyMap } from './infra/keymap';
-import { saveDialog } from './infra/file-dialog';
+import { openDialog, saveDialog } from './infra/file-dialog';
 import { JupyterConnection } from './backend/connection';
 import { JupyterSubprocess } from './backend/slave-process';
 import { JupyterHosts } from './backend/hosts';
@@ -55,6 +55,7 @@ class IDE {
     }
     set state(v: State) {
         if (v.filename) this.store.filename = v.filename;
+        this.updateTitle();
     }
 
     async start() {
@@ -77,13 +78,19 @@ class IDE {
             new JupyterAutocomplete(this.jup.conn);
     }
 
+    updateTitle() {
+        document.title = path.basename(this.store.filename);
+    }
+
     new(filename: string = this._untitled()) {
         this.store.filename = filename;
+        this.updateTitle();
         this.app.new();
     }
 
     load(filename: string) {
         this.store.filename = path.resolve(this.wd, filename);
+        this.updateTitle();
         this.app.loadFrom(this.store.load());
     }
 
@@ -92,12 +99,18 @@ class IDE {
             this.store.filename = path.resolve(this.wd, filename);
         }
         this.store.save(this.app.model.to());
+        this.updateTitle();
         this.expose(); /** @todo not always? */
     }
 
     async saveDialog() {
         let fn = (await saveDialog(this.store.filename, '.ipynb')).path;
         this.save(fn);
+    }
+
+    async loadDialog() {
+        let fn = (await openDialog('.ipynb')).path;
+        this.load(fn);
     }
 
     export(filename: string, format?: 'py' | 'ipynb') {
@@ -130,8 +143,10 @@ class IDE {
         return new KeyMap({
             'Mod-S': () => this.save(),
             'Shift-Mod-S': () => { this.saveDialog(); },
+            'Mod-O': () => { this.loadDialog(); },
             'Mod-R': () => this.app.runAll(),
-            'Mod-I': () => this.jup.conn.userInterrupt()
+            'Mod-I': () => this.jup.conn.userInterrupt(),
+            'Mod-P': () => this.app.view.commands.open()
         })
     }
 }
