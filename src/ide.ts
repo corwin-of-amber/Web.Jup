@@ -20,6 +20,7 @@ class IDE {
         subproc: JupyterSubprocess,
         conn: JupyterConnection
     }
+    hosts: JupyterHosts
 
     project: Project
     wd: string
@@ -46,6 +47,8 @@ class IDE {
         let s = this.persist.load() as State;
         if (s) this.state = s;
         atexit(() => this.persist.save(this.state), this);
+
+        this.app.on('command', (cmd: {command: string}) => this.handleCommand(cmd));
 
         this.globalKeyMap().attach(document.body);
     }
@@ -137,6 +140,36 @@ class IDE {
         store.save(this.app.model);
     }
 
+    handleCommand(cmd: {command: string, arg?: string}) {
+        console.log(cmd);
+        switch (cmd.command) {
+            case 'New': this.new(); break;
+            case 'Open...': this.loadDialog(); break;
+            case 'New Window (slave)':
+                window.open('?slave');
+                break;
+            case 'Connect to Remote...':
+                this.app.view.commandBar('/remote');
+                break;
+
+            case '/remote':
+                switch (cmd.arg) {
+                    case 'Refresh...':
+                        this.hosts.refreshRemote().then(() =>
+                            this.updateHostList());
+                        break;
+                    default:
+                        let i = +cmd.arg.match(/^\[(\d+)\]/)?.[1];
+                        if (typeof i === 'number')
+                            this.switchToRemote(this.hosts.active[i]);
+                }
+        }
+    }
+
+    updateHostList() {
+        this.app.view.commandNav.toc['/remote'][0] = this.hosts.formatForDisplay();
+    }
+
     _untitled() { return path.join(this.wd, 'untitled.ipynb'); }
 
     globalKeyMap() {
@@ -146,7 +179,7 @@ class IDE {
             'Mod-O': () => { this.loadDialog(); },
             'Mod-R': () => this.app.runAll(),
             'Mod-I': () => this.jup.conn.userInterrupt(),
-            'Mod-P': () => this.app.view.commands.open()
+            'Mod-P': () => this.app.view.commandBar()
         })
     }
 }

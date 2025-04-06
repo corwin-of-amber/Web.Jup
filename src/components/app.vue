@@ -1,7 +1,8 @@
 <template>
     <Notebook ref="notebook" :model="model" :options="options"
-        @cell:action="companion.handleCellAction($event)"></Notebook>
-    <CommandPalette ref="commands" :commands="commandList"></CommandPalette>
+        @cell:action="$emit('cell:action', $event)"></Notebook>
+    <CommandPalette ref="commands" :commands="commandNav.toc[commandNav.current]"
+        @command="handleCommand($event)"></CommandPalette>
 </template>
 
 <script lang="ts">
@@ -10,18 +11,46 @@ import { Notebook, CommandPalette, INotebook, ICommandPalette }
     from '../../packages/vuebook';
 import { Model as M } from '../../packages/vuebook';
 
+/** @note important -- must use *exact* same ver as vuebook */
+import { useCommandState } from 'vue-command-palette';
+
+
 @Component({
+    emits: ['cell:action', 'command'],
     components: { Notebook, CommandPalette }
 })
 class IApp extends Vue {
     @Ref notebook: INotebook
     @Ref commands: ICommandPalette
+    @Ref remoteHosts: ICommandPalette
 
     @Prop companion: any
     model: M.Notebook = {cells: []}
     options = {collapsible: false}
+    
+    commandNav = {
+        current: '/',
+        toc: {
+            '/':       [['New', 'Open...', 'Save', 'Save As...'], ['New Window (slave)'], ['Connect to Remote...']],
+            '/remote': [['newton'], ['Refresh...']]
+        },
+        state: useCommandState()
+    }
 
-    commandList = ['Open...', 'Save', 'Save As...', 'New Window (slave)']
+    mounted() {
+        this.$watch(() => this.commands.isOpen,
+            isOpen => { if (!isOpen) this.commandNav.state.resetStore(); });
+    }
+
+    commandBar(at = '/') {
+        this.commandNav.current = at;
+        requestAnimationFrame(() => this.commands.open());
+    }
+
+    handleCommand(cmd: {command: string}) {
+        let ctx = this.commandNav.current;
+        this.$emit('command', ctx == '/' ? cmd : {command: ctx, arg: cmd.command});
+    }
 }
 
 export { IApp }

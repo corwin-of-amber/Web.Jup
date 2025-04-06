@@ -55,13 +55,13 @@ async function main() {
 
     proxySetup().then(() => console.log('PROXY SET'));
 
-    let hosts = JupyterHosts.fromFile('tmp/jups');
-    hosts.refresh();
-
     let ide = new IDE({
         rootDir: WD
     });
-    Object.assign(window, {ide, hosts, appwins});
+    Object.assign(window, {ide, appwins});
+
+    ide.hosts = JupyterHosts.fromFile('tmp/jups');
+    ide.hosts.refresh().then(() => ide.updateHostList());
 
     if (!slave) {
         ide.prerun =

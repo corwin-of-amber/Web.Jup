@@ -9,6 +9,9 @@ import App, { IApp } from './components/app.vue';
 import { Status } from '@jupyterlab/services/lib/kernel/messages';
 import atexit from './infra/atexit';
 
+/** @oops */
+import '../packages/vuebook/src/components/command-palette/themes/simple.scss';
+
 
 class NotebookApp extends EventEmitter {
     model: ModelImpl
@@ -27,7 +30,8 @@ class NotebookApp extends EventEmitter {
 
     _createUI(container: HTMLElement) {
         this.instance = Vue.createApp(App, {
-            companion: this
+            'onCell:action': (action: NotebookApp.CellAction) => this.emit('cell:action', action),
+            onCommand: (cmd: {command: string}) => this.emit('command', cmd)
         });
         this.view = this.instance.mount(container) as IApp;
     }

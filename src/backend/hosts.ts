@@ -1,5 +1,6 @@
 import _ from 'lodash';
 import path from 'path';
+import child_process from 'child_process';
 import { FileStore, StoreBase } from '../infra/store';
 
 
@@ -18,6 +19,11 @@ class JupyterHosts {
         return this;
     }
 
+    async refreshRemote() {
+        this.entries = await this.fetchRemote();
+        return this;
+    }
+
     get active() {
         return this.entries.map(e => e.info);
     }
@@ -27,6 +33,26 @@ class JupyterHosts {
         entries = entries.filter(e =>
             path.basename(e.meta.filename).startsWith('jpserver-'));
         return _.sortBy(entries, e => -e.meta.timestamp);
+    }
+
+    async fetchRemote() {
+        let out = await new Promise<string>((resolve, reject) =>
+            /** @todo this is oddly specific */
+            child_process.execFile('newton', ['var/scripts/list-jups'], {encoding: 'utf8'},
+                (err, stdout, stderr) => {
+                    if (stderr) console.warn('[remotes]', stderr);
+                    if (err) reject(err);
+                    else resolve(stdout);
+                }));
+        
+        this.store.save(JSON.parse(out));
+        return await this.fetch();
+    }
+
+    formatForDisplay() {
+        let df = new Intl.DateTimeFormat('en', {hour: 'numeric', minute: 'numeric', month: 'numeric', day: 'numeric', hour12:false});
+        return this.entries.map(({info, meta}, i) =>
+            `[${i}] ${info.hostname} (${df.format(meta.timestamp * 1000)})`);
     }
 
     static fromFile(filename: string) {

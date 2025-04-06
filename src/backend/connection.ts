@@ -44,8 +44,14 @@ class JupyterConnection {
 
     async startTry(options: KernelStartOptions = {}) {
         this.kernel = await this.kman.startNew({});
+        this.kernel.registerCommTarget('jupyter.widget', (comm, msg) => this.handleComm(comm, msg));
         if (options.prerun) this.prerun = options.prerun;
         if (options.wd) this.chdir(options.wd);
+    }
+
+    handleComm(comm, msg) {
+        /** @todo not implemented */
+        console.log('handleComm', comm, msg)
     }
 
     async destroy() {
