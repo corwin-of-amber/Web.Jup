@@ -10,6 +10,7 @@ import { Model } from '../../packages/vuebook';
 import type { NotebookApp } from '../app';
 import { StoreBase } from '../infra/store';
 import atexit from '../infra/atexit';
+import { Retrying } from '../infra/retry';
 
 
 class JupyterConnection {
@@ -19,7 +20,8 @@ class JupyterConnection {
 
     frontend: NotebookApp
 
-    prerun: StoreBase<string> 
+    prerun: StoreBase<string>
+    connectRetry = new Retrying
 
     constructor(server: URL | {baseUrl: string, token?: string}) {
         this.server = (server instanceof URL) ? {
@@ -39,7 +41,8 @@ class JupyterConnection {
 
     async start(options: KernelStartOptions = {}) {
         if (!this.kman) this.connect();
-        return retries(() => this.startTry(options), 500);
+        return this.connectRetry.repeatedly(
+            () => this.startTry(options), 500);
     }
 
     async startTry(options: KernelStartOptions = {}) {
@@ -56,10 +59,14 @@ class JupyterConnection {
 
     async destroy() {
         if (this.kman) {
-            await this.kernel?.shutdown();
+            try {
+                await this.kernel?.shutdown();
+            }
+            catch (e) { console.warn('[disconnect]', e); }
             this.kman.dispose();
         }
         this.kman = undefined;
+        this.connectRetry.stop();
     }
 
     attach(frontend: NotebookApp) {
@@ -164,19 +171,6 @@ class JupyterConnection {
 type KernelStartOptions = {
     wd?: string
     prerun?: StoreBase<string>
-}
-
-
-const delay = (ms: number) =>
-    new Promise(resolve => setTimeout(resolve, ms));
-
-async function retries<T>(op: () => Promise<T>, wait: number): Promise<T> {
-    while (true) {
-        try {
-            return await op();
-        }
-        catch (e) { console.log('retry'); await delay(wait); }
-    }
 }
 
 
