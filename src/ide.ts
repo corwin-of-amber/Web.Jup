@@ -13,6 +13,9 @@ import { JupyterHosts } from './backend/hosts';
 import { JupyterAutocomplete } from './autocomplete';
 import atexit from './infra/atexit';
 
+// Extension components
+import Grid from './components/grid.vue';
+
 
 class IDE {
     app: NotebookApp
@@ -49,7 +52,7 @@ class IDE {
         atexit(() => this.persist.save(this.state), this);
 
         this.app.on('command', (cmd: {command: string}) => this.handleCommand(cmd));
-
+        this.registerComponents();
         this.globalKeyMap().attach(document.body);
     }
 
@@ -59,6 +62,10 @@ class IDE {
     set state(v: State) {
         if (v.filename) this.store.filename = v.filename;
         this.updateTitle();
+    }
+
+    registerComponents() {
+        this.app.instance.component('Grid', Grid)
     }
 
     async start() {
@@ -72,13 +79,23 @@ class IDE {
             {baseUrl: host.url, token: host.token}));
     }
 
-    async connectTo(conn: JupyterConnection) {
-        this.jup.conn = conn;
+    async connectTo(conn: JupyterConnection | URL) {
+        this.jup.conn = JupyterConnection.promote(conn);
         this.jup.conn.attach(this.app);
         await this.jup.conn.start({wd: this.wd, prerun: this.prerun});
         // configure editor (this is global)
         CodeEditor.lookupCompletions =
             new JupyterAutocomplete(this.jup.conn);
+    }
+
+    async connectToMaster(masterWindow: Window & {ide: IDE}) {
+        /** @note need `new URL` to bring into current context */
+        let url = new URL(await
+        (masterWindow.ide as IDE).jup.subproc.connectionInfo);
+        console.log('%c[slave] connect to master @ %s',
+                    'color: #88f', url.origin);
+
+        this.connectTo(new JupyterConnection(url));
     }
 
     updateTitle() {

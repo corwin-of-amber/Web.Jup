@@ -9,7 +9,8 @@
 import { Vue, toNative, Ref, Prop, Component } from 'vue-facing-decorator';
 import { Notebook, CommandPalette, INotebook, ICommandPalette }
     from '../../packages/vuebook';
-import { Model as M } from '../../packages/vuebook';
+import { Options, Model as M } from '../../packages/vuebook';
+
 
 /** @note important -- must use *exact* same ver as vuebook */
 import { useCommandState } from 'vue-command-palette';
@@ -24,9 +25,11 @@ class IApp extends Vue {
     @Ref commands: ICommandPalette
     @Ref remoteHosts: ICommandPalette
 
-    @Prop companion: any
     model: M.Notebook = {cells: []}
-    options = {collapsible: false}
+    options: Partial<Options> = {
+        collapsible: false,
+        editor: {completions: [], virtualKeyboard: false}
+    }
     
     commandNav = {
         current: '/',

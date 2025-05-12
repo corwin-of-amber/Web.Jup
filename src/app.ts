@@ -1,13 +1,15 @@
 import { EventEmitter } from 'events';
 import * as Vue from 'vue';
 import { IMimeBundle } from '@jupyterlab/nbformat';
+import { Status } from '@jupyterlab/services/lib/kernel/messages';
 
 import { QualifiedLocalStore, Serialization } from './infra/store';
+import atexit from './infra/atexit';
 
 import { Model, ModelImpl } from '../packages/vuebook';
 import App, { IApp } from './components/app.vue';
-import { Status } from '@jupyterlab/services/lib/kernel/messages';
-import atexit from './infra/atexit';
+import { Annotations } from './frontend/annotations';
+import { Vue3DisplayFormat } from './frontend/display-extensions';
 
 /** @oops */
 import '../packages/vuebook/src/components/command-palette/themes/simple.scss';
@@ -18,6 +20,7 @@ class NotebookApp extends EventEmitter {
 
     instance: Vue.App
     view: IApp
+    displayFormats = [new Vue3DisplayFormat]
 
     store = new QualifiedLocalStore<Model.Notebook>("workbook");
 
@@ -66,6 +69,9 @@ class NotebookApp extends EventEmitter {
      * Invoked by the Jupyter backend when computation completes.
      */
     addResult(cell: Model.Cell, result: IMimeBundle) {
+        for (let fmt of this.displayFormats)
+            result = fmt.formatResult(result) ?? result;
+
         this.model.addResult(cell, result);
     }
 
@@ -87,7 +93,7 @@ class NotebookApp extends EventEmitter {
 
     runAll() {
         for (let cell of this.model.cells) {
-            if (!this.cellFlags(cell).ondemand)
+            if (!this.cellAnnotations(cell).some(a => a.type === 'ondemand'))
                 this.runCell(cell);
         }
     }
@@ -121,11 +127,12 @@ class NotebookApp extends EventEmitter {
         this.emit('cell:action', action);        
     }
 
-    cellFlags(cell: Model.Cell) {
-        /** @todo parse pragmas more systematically */
-        return {
-            ondemand: !!cell.input.match(/^#pragma ondemand/m)
-        }
+    annotations(): Annotations.Annotation[] {
+        return this.model.cells.flatMap(cell => this.cellAnnotations(cell));
+    }
+
+    cellAnnotations(cell: Model.Cell): Annotations.Annotation[] {
+        return Annotations.parse(cell.input);
     }
 }
 

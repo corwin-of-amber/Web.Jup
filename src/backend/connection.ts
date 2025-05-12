@@ -32,6 +32,11 @@ class JupyterConnection {
         atexit(() => this.destroy(), this);
     }
 
+    static promote(connInfo: JupyterConnection | URL | {baseUrl: string}) {
+        return connInfo instanceof JupyterConnection ? connInfo :
+            new JupyterConnection(connInfo);
+    }
+
     connect() {
         assert(!this.kman);
         this.kman = new KernelManager({
