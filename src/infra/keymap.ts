@@ -47,7 +47,10 @@ namespace KeyMap {
         return name
     }
 
-    export const Mod = /Mac/.test(navigator.userAgent) ? 'Meta' : 'Ctrl';
+    const isMac = /Mac/.test(navigator.userAgent) ||
+        typeof process !== 'undefined' && process.platform == 'darwin';
+
+    export const Mod = isMac ? 'Meta' : 'Ctrl';
 }
 
 

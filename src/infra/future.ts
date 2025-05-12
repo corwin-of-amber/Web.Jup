@@ -19,7 +19,9 @@ class Future<A> {
     resolve(val:A)  { if (!this._done) { this._done = this._success = true; this._resolve(val); } }
     reject(err?)    { if (!this._done) { this._done = true; this._reject(err); } }
 
-    then(cont)      { return this.promise.then(cont); }
+    then<T>(cont: (v: A) => T) {
+        return this.promise.then(cont);
+    }
 
     isDone()        { return this._done; }
     isSuccessful()  { return this._success; }
