@@ -6,13 +6,10 @@ import { Status } from '@jupyterlab/services/lib/kernel/messages';
 import { QualifiedLocalStore, Serialization } from './infra/store';
 import atexit from './infra/atexit';
 
-import { Model, ModelImpl } from '../packages/vuebook';
+import { Model, ModelImpl } from '../packages/vuebook/src';
 import App, { IApp } from './components/app.vue';
 import { Annotations } from './frontend/annotations';
 import { Vue3DisplayFormat } from './frontend/display-extensions';
-
-/** @oops */
-import '../packages/vuebook/src/components/command-palette/themes/simple.scss';
 
 
 class NotebookApp extends EventEmitter {

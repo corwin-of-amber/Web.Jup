@@ -1,6 +1,6 @@
 import path from 'path';
 
-import { Model, CodeEditor } from '../packages/vuebook';
+import { Model, CodeEditor } from '../packages/vuebook/src';
 
 import { NotebookApp } from './app';
 import { StoreBase, FileStore, QualifiedLocalStore, VersionedStore,
@@ -14,7 +14,7 @@ import { JupyterAutocomplete } from './autocomplete';
 import atexit from './infra/atexit';
 
 // Extension components
-import Grid from './components/grid.vue';
+import Grid from './components/grid';
 
 
 class IDE {

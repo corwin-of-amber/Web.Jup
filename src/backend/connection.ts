@@ -6,7 +6,7 @@ import { IErrorMsg, IExecuteReply, IExecuteResultMsg, IIOPubMessage, IOPubMessag
 import ansiStrip from 'strip-ansi';
 import unescapeJs from 'unescape-js';
 
-import { Model } from '../../packages/vuebook';
+import type { Model } from '../../packages/vuebook';
 import type { NotebookApp } from '../app';
 import { StoreBase } from '../infra/store';
 import atexit from '../infra/atexit';
