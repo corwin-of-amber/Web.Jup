@@ -124,12 +124,14 @@ class NotebookApp extends EventEmitter {
         this.emit('cell:action', action);        
     }
 
-    annotations(): Annotations.Annotation[] {
-        return this.model.cells.flatMap(cell => this.cellAnnotations(cell));
+    annotations(filt?: {type: string}): Annotations.Annotation[] {
+        return this.model.cells.flatMap(cell => this.cellAnnotations(cell, filt));
     }
 
-    cellAnnotations(cell: Model.Cell): Annotations.Annotation[] {
-        return Annotations.parse(cell.input);
+    cellAnnotations(cell: Model.Cell, filt?: {type: string}): Annotations.Annotation[] {
+        let ffilt = filt ? (as: Annotations.Annotation[]) => 
+            as.filter(a => !filt.type || a.type === filt.type) : ((as: any) => as);
+        return ffilt(Annotations.parse(cell.input));
     }
 }
 

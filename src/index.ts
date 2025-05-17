@@ -3,67 +3,10 @@ import './index.scss';
 
 import { proxySetup } from './etc/proxy-settings';
 import { JupyterHosts } from './backend/hosts';
-import { LocalStore, NOP, VersionedStore } from './infra/store';
-import { EventEmitter } from 'events';
+import { ApplicationWindows } from './frontend/app-windows';
 
-
-declare var nw: any;
 
 const WD = 'tmp/scratch';
-
-
-class ApplicationWindows extends EventEmitter {
-    role: Role
-
-    master: Window
-
-    constructor(role: Role) {
-        super();
-        this.role = role;
-        switch (this.role) {
-            case 'master':
-                window.addEventListener('message', m =>
-                    this.handleMaster(m));
-                this.broadcast({type: 'startup'});
-                break;
-            case 'slave':
-                window.addEventListener('message', m =>
-                    this.handleSlave(m));
-                this.broadcast({type: 'announce'});
-                break;
-        }
-    }
-
-    broadcast(msg: any) {
-        nw.Window.getAll((wins: Iterable<{window: Window}>) => {
-            for (let w of wins) {
-                w.window.postMessage(msg, '*');
-            }
-        });
-    }
-
-    handleMaster(m: MessageEvent<any>) {
-        console.log(m.data, m.source);
-        switch (m.data.type) {
-            case 'announce':
-                (m.source as Window).postMessage({type: 'bind'}, '*');
-                break;
-        }
-    }
-
-    handleSlave(m: MessageEvent<any>) {
-        console.log(m.data);
-        switch (m.data.type) {
-            case 'startup': window.location.reload(); break;
-            case 'bind':
-                this.master = m.source as Window;
-                this.emit('bind', {master: this.master});
-                break;
-        }
-    }
-}
-
-type Role = 'master' | 'slave';
 
 
 async function main() {
@@ -71,19 +14,20 @@ async function main() {
     let slave = sp.has('slave'), master = !slave,
         native = !!process.versions?.nw;
 
-    if (slave)
-        window['store:prefix'] = 'slave';  /* this must be assign before IDE */
+    if (slave)           /* this must be assigned before IDE creation */
+        window['store:prefix'] = `slave-${sp.get('slave')}`;
         
     let ide = new IDE({
         rootDir: WD
     });
-    Object.assign(window, {ide});
+    Object.assign(window, {ide, ApplicationWindows});
     
     if (native) {
         let appwins = new ApplicationWindows(slave ? 'slave' : 'master');
         if (slave) {
             appwins.on('bind', ({master}) => ide.connectToMaster(master));
         }
+        ApplicationWindows.instance = appwins;
 
         proxySetup().then(() => console.log('PROXY SET'));
 
@@ -91,8 +35,6 @@ async function main() {
         ide.hosts.refresh().then(() => ide.updateHostList());
 
         if (master) {
-            ide.prerun =
-                new VersionedStore(new LocalStore('slave:expose', JSON), NOP);
             ide.start();
         }
     }

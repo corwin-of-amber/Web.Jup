@@ -95,6 +95,12 @@ class JupyterConnection {
         });
     }
 
+    runPrerun() {
+        let code = this.prerun?.load();
+        if (code)
+            this.exec(code);
+    }
+
     formatErrorTraceback(traceback: string[]) {
         // hack to remove leading '----' and 'Traceback:' lines
         if (traceback.length > 2) traceback = traceback.slice(2);
@@ -165,7 +171,7 @@ class JupyterConnection {
         switch (action.type) {
         case 'exec':
         case 'exec-fwd':
-            if (this.prerun) this.exec(this.prerun.load());
+            this.runPrerun();
             this.runCell(action.cell);
             break;
         }

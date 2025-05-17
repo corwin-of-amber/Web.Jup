@@ -128,14 +128,21 @@ class VersionedStore<Doc, W extends StoreBase<Versioned<string>> = StoreBase<Ver
 
     load(): Doc {
         let d = this.inner.load();
-        /** @todo update this.current */
-        return this.ser.parse(d.data);
+        if (d.revision != this.current?.revision) {
+            this.current = {timestamp: d.timestamp, revision: d.revision};
+            return this.ser.parse(d.data);
+        }
+        else
+            return undefined; /* signifies no new data */
     }
 
     save(d: Doc) {
         let data = this.ser.stringify(d);
-        /** @todo actual metadata */
-        this.inner.save({timestamp: 0, revision: 0, data});
+        this.inner.save({
+            timestamp: Date.now(),
+            revision: (this.current?.revision ?? 0) + 1,
+            data
+        });
     }
 }
 

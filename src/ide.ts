@@ -4,7 +4,7 @@ import { Model, CodeEditor } from '../packages/vuebook/src';
 
 import { NotebookApp } from './app';
 import { StoreBase, FileStore, QualifiedLocalStore, VersionedStore,
-         Serialization } from './infra/store';
+         Serialization, LocalStore} from './infra/store';
 import { KeyMap } from './infra/keymap';
 import { openDialog, saveDialog } from './infra/file-dialog';
 import { JupyterConnection } from './backend/connection';
@@ -15,6 +15,10 @@ import atexit from './infra/atexit';
 
 // Extension components
 import Grid from './components/grid';
+import { ApplicationWindows } from './frontend/app-windows';
+import { imap } from './infra/itertools';
+import _ from 'lodash';
+import { CrossDeps } from './frontend/dependencies';
 
 
 class IDE {
@@ -46,6 +50,7 @@ class IDE {
 
         this.ipynb = new NotebookApp.IpynbConverter();
         this.store = new FileStore(this._untitled(), this.ipynb);
+        this.prerun = new CrossDeps(this.app);
 
         let s = this.persist.load() as State;
         if (s) this.state = s;
@@ -151,10 +156,18 @@ class IDE {
 
     expose() {
         let ser = new Model.PythonScriptConverter,
+            name = path.basename(this.store.filename),
             store = new VersionedStore(
-                        new QualifiedLocalStore("expose", JSON), ser);
+                        new LocalStore(`expose:${name}`, JSON), ser);
 
         store.save(this.app.model);
+    }
+
+    async openSlave() {
+        let wins = await ApplicationWindows.instance.getAll(),
+            get = (w: Window, p: string) => new URLSearchParams(w.location.search).get(p),
+            max = _.max([...imap(wins, w => +get(w, 'slave'))]);
+        window.open(`?slave=${max+1}`);
     }
 
     handleCommand(cmd: {command: string, arg?: string}) {
@@ -162,9 +175,7 @@ class IDE {
         switch (cmd.command) {
             case 'New': this.new(); break;
             case 'Open...': this.loadDialog(); break;
-            case 'New Window (slave)':
-                window.open('?slave');
-                break;
+            case 'New Window (slave)': this.openSlave(); break;
             case 'Connect to Remote...':
                 this.app.view.commandBar('/remote');
                 break;
