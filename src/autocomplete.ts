@@ -10,16 +10,18 @@ class JupyterAutocomplete {
     }
 
     async get(prefix: string, word: string) {
-        try {
-            var e: string[] =
-                await this.jup.evalJson(`dir(${prefix})`);
+        if (prefix.length > 0 || word.length > 0) {
+            try {
+                var e: string[] =
+                    await this.jup.evalJson(`dir(${prefix})`);
+            }
+            catch {
+                return undefined;
+            }
+            if (!word.startsWith('_'))
+                e = e.filter(w => !w.startsWith('_'));
+            return e.map(w => ({label: w}));
         }
-        catch {
-            return undefined;
-        }
-        if (!word.startsWith('_'))
-            e = e.filter(w => !w.startsWith('_'));
-        return e.map(w => ({label: w}));
     }
 }
 
