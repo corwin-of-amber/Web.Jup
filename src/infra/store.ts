@@ -128,25 +128,36 @@ class VersionedStore<Doc, W extends StoreBase<Versioned<string>> = StoreBase<Ver
 
     load(): Doc {
         let d = this.inner.load();
-        if (d.revision != this.current?.revision) {
-            this.current = {timestamp: d.timestamp, revision: d.revision};
+        if (d && d.revision != this.current?.revision) {
+            this.current = this.vertag(d)
             return this.ser.parse(d.data);
         }
         else
             return undefined; /* signifies no new data */
     }
 
+    peek() {
+        let d = this.inner.load();
+        this.current = d ? this.vertag(d) : undefined;
+    }
+
     save(d: Doc) {
         let data = this.ser.stringify(d);
+        this.peek();
         this.inner.save({
             timestamp: Date.now(),
             revision: (this.current?.revision ?? 0) + 1,
             data
         });
     }
+
+    private vertag<T>(d: Versioned<T>): VersionTag {
+        return {timestamp: d.timestamp, revision: d.revision};
+    }
 }
 
-type Versioned<Doc> = {timestamp: number, revision: number, data: Doc};
+type VersionTag = {timestamp: number, revision: number}
+type Versioned<Doc> = VersionTag & {data: Doc};
 
 
 function persistField<T>(obj: T, key: keyof T, store: StoreBase<any>) {
