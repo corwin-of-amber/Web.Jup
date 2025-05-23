@@ -7,16 +7,13 @@ class Vue3DisplayFormat {
 
     formatResult(result: IMimeBundle): IMimeBundle | undefined {
         let html = result['text/html'];
-        if (typeof html == 'string') {
-            let mo = html.match(/^<\?DOCTYPE (.*?)>(.*)/);
-            if (mo) {
-                let xml = this.parseXML(mo[2]);
-                if (xml)
-                    return {[`application/${mo[1]}`]: {
-                        is: xml.tagName,
-                        props: this.parseData(xml.textContent)
-                    }};
-            }
+        if (typeof html == 'string' && html.match(/^<\!DOCTYPE/)) {
+            let xml = this.parseXML(html);
+            if (xml)
+                return {[`application/${xml.type}`]: {
+                    is: xml.root.tagName,
+                    props: this.formatData(xml.root)
+                }};
         }
         else
             return undefined;
@@ -24,21 +21,44 @@ class Vue3DisplayFormat {
 
     parseXML(s: string) {
         let doc = this.parser.parseFromString(s, 'application/xml'),
-            tag = doc.firstElementChild.tagName;
-        if (tag === 'html')  /* DOMParser reports error as HTML doc */
+            dt = doc.firstChild;
+        if (dt.nodeType == Node.DOCUMENT_TYPE_NODE) {
+            return {type: dt.nodeName, root: doc.firstElementChild}
+        }
+        else  /* DOMParser reports error as HTML doc */
             console.error('XML parse error', s, doc);
-        else
-            return doc.firstElementChild;
     }
 
     parseData(s: string) {
         try {
-            return {data: JSON.parse(s)};
+            return JSON.parse(s);
         }
         catch (e) {
             console.error('JSON parse error', s, e);
             return {};
         }
+    }
+
+    formatData(root: Element) {
+        let json = this.parseData(root.textContent);
+        /** @todo check root attributes to select format adapter */
+        return this.formatTabularGrid(json);
+    }
+
+    formatTabularGrid(json: any) {
+        function rows(data: any[][], i=0) {
+            if (i >= json.index.length)
+                return data.map(row => row.map(cell => ({text: cell})))
+            else
+                return data.map(([key, subrows]) =>
+                    [{text: key}, {subrows: rows(subrows, i + 1)}])
+        }
+
+        let x = [
+            [...json.index, ...json.columns].map(x => ({text: x})),
+            ...rows(json.data)
+        ];
+        return {data: x};
     }
 }
 
