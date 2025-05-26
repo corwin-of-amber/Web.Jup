@@ -22,6 +22,10 @@ async function main() {
     });
     Object.assign(window, {ide, ApplicationWindows});
     
+    if (sp.has('keyboard')) {
+        ide.app.view.options.keyboard.custom = true;
+    }
+
     if (native) {
         let appwins = new ApplicationWindows(slave ? 'slave' : 'master');
         if (slave) {
