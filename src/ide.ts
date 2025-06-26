@@ -4,7 +4,7 @@ import { Model, CodeEditor } from '../packages/vuebook/src';
 
 import { NotebookApp } from './app';
 import { StoreBase, FileStore, QualifiedLocalStore, VersionedStore,
-         Serialization, LocalStore} from './infra/store';
+         Serialization, LocalStore, NOP} from './infra/store';
 import { KeyMap } from './infra/keymap';
 import { openDialog, saveDialog } from './infra/file-dialog';
 import { JupyterConnection } from './backend/connection';
@@ -158,9 +158,14 @@ class IDE {
         let ser = new Model.PythonScriptConverter,
             name = path.basename(this.store.filename),
             store = new VersionedStore(
-                        new LocalStore(`expose:${name}`, JSON), ser);
+                        new LocalStore(`expose:${name}`, JSON), JSON);
 
-        store.save(this.app.model);
+        let expose = {
+            filename: this.store.filename,
+            py: ser.stringify(this.app.model)
+        }
+
+        store.save(expose);
     }
 
     async openSlave() {

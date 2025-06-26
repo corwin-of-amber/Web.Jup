@@ -114,14 +114,24 @@ class FileStore<Doc = any> implements StoreBase<Doc> {
 }
 
 
-class VersionedStore<Doc, W extends StoreBase<Versioned<string>> = StoreBase<Versioned<string>>>
+interface SerializationTo<Doc = any, To = string> {
+    parse(s: To): Doc
+    stringify(d: Doc): To
+}
+
+class Nop<T> implements SerializationTo<T, T> {
+    parse(s: T) { return s; }
+    stringify(d: T) { return d; }
+}
+
+class VersionedStore<Doc, To = string, W extends StoreBase<Versioned<To>> = StoreBase<Versioned<To>>>
         implements StoreBase<Doc> {
 
     inner: W
-    ser: Serialization<Doc>
+    ser: SerializationTo<Doc, To>
     current: {timestamp: number, revision: number}
 
-    constructor(inner: W, ser: Serialization<Doc> = DEFAULT_SER) {
+    constructor(inner: W, ser: SerializationTo<Doc, To>) {
         this.inner = inner;
         this.ser = ser;
     }

@@ -7,18 +7,20 @@ import type { NotebookApp } from '../app';
 class CrossDeps implements StoreBase<string> {
 
     app: NotebookApp
-    stores: ViviMap<string, StoreBase<string>>
+    stores: ViviMap<string, StoreBase<{py: string}>>
 
     constructor(app: NotebookApp) {
         this.app = app;
-        this.stores = new ViviMap<string, StoreBase<string>>().withFactory(key =>
-            new VersionedStore(new LocalStore(`expose:${key}`, JSON), NOP));
+
+        
+        this.stores = new ViviMap<string, StoreBase<{py: string}>>().withFactory(key =>
+            new VersionedStore(new LocalStore(`expose:${key}`, JSON), JSON));
     }
 
     load() {
         let deps = this.app.annotations({type: 'use'})
                 .flatMap((x: Annotations.UseAnnotation) => x.modules),
-            code = deps.flatMap(m => this.stores.get(this._ext(m)).load() ?? []);
+            code = deps.flatMap(m => this._getModule(m) ?? []);
 
         if (code.length > 0)
             return code.join('\n');
@@ -30,6 +32,11 @@ class CrossDeps implements StoreBase<string> {
 
     _ext(fn: string) {
         return fn.match(/[.](py|ipynb)$/) ? fn : `${fn}.ipynb`;
+    }
+
+    _getModule(moduleName: string) {
+        let doc = this.stores.get(this._ext(moduleName)).load();
+        return doc?.py;
     }
 }
 
