@@ -168,12 +168,14 @@ class JupyterConnection {
     }
 
     private handleCellAction(action: NotebookApp.CellAction) {
-        switch (action.type) {
-        case 'exec':
-        case 'exec-fwd':
-            this.runPrerun();
-            this.runCell(action.cell);
-            break;
+        if (action.cell.kind === 'code/python') {
+            switch (action.type) {
+            case 'exec':
+            case 'exec-fwd':
+                this.runPrerun();
+                this.runCell(action.cell);
+                break;
+            }
         }
     }
 }

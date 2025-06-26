@@ -11,6 +11,10 @@ namespace Annotations {
         modules: string[]
     }
 
+    export interface KindAnnotation extends Annotation {
+        kind: string
+    }
+
     export function array<T>(r: T | T[]): T[] {
         return r ? Array.isArray(r) ? r : [r] : [];
     }
@@ -21,7 +25,8 @@ namespace Annotations {
                 type: 'use',
                 modules: modules.flatMap(array)
             };
-        }
+        },
+        kind(kind: string): KindAnnotation { return {type: 'kind', kind}; }
     });
 
     /**

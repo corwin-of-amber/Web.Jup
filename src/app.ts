@@ -30,7 +30,7 @@ class NotebookApp extends EventEmitter {
 
     _createUI(container: HTMLElement) {
         this.instance = Vue.createApp(App, {
-            'onCell:action': (action: NotebookApp.CellAction) => this.emit('cell:action', action),
+            'onCell:action': (action: NotebookApp.CellAction) => this.handleCellAction(action),
             onCommand: (cmd: {command: string}) => this.emit('command', cmd)
         });
         this.view = this.instance.mount(container) as IApp;
@@ -85,12 +85,12 @@ class NotebookApp extends EventEmitter {
     }
 
     runCell(cell: Model.Cell) {
-        this.handleCellAction({type: 'exec', cell});
+        this.emit('cell:action', {type: 'exec', cell});
     }
 
     runAll() {
         for (let cell of this.model.cells) {
-            if (!this.cellAnnotations(cell).some(a => a.type === 'ondemand'))
+            if (this.cellAnnotations(cell, {type: 'ondemand'}).length > 0)
                 this.runCell(cell);
         }
     }
@@ -121,6 +121,13 @@ class NotebookApp extends EventEmitter {
     }
 
     handleCellAction(action: NotebookApp.CellAction) {
+        // Preflight: determine or update cell kind
+        let cell = action.cell;
+        cell.kind = 'code/python';  /** @todo only for code */
+        for (let {kind} of this.cellAnnotations(cell, {type: 'kind'}) as Annotations.KindAnnotation[]) {
+            cell.kind = kind;
+        }
+        // Dispatch to app handlers
         this.emit('cell:action', action);        
     }
 
