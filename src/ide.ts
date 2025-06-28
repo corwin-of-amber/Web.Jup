@@ -11,6 +11,7 @@ import { JupyterConnection } from './backend/connection';
 import { JupyterSubprocess } from './backend/slave-process';
 import { JupyterHosts } from './backend/hosts';
 import { JupyterAutocomplete } from './autocomplete';
+import { JsInterpreter } from './backend/interp-js';
 import atexit from './infra/atexit';
 
 // Extension components
@@ -28,6 +29,7 @@ class IDE {
         conn: JupyterConnection
     }
     hosts: JupyterHosts
+    js: JsInterpreter
 
     project: Project
     wd: string
@@ -47,6 +49,8 @@ class IDE {
             subproc: new JupyterSubprocess({port: 2088}),
             conn: undefined
         };
+
+        this.js = new JsInterpreter().attach(this.app);
 
         this.ipynb = new NotebookApp.IpynbConverter();
         this.store = new FileStore(this._untitled(), this.ipynb);

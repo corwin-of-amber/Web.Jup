@@ -81,12 +81,6 @@ class JupyterConnection {
         return this;
     }
 
-    runAll() {
-        for (let cell of this.frontend.model.cells) {
-            this.runCell(cell);
-        }
-    }
-
     runCell(cell: Model.Cell) {
         let ksfh = this.kernel.requestExecute({ code: cell.input });
         ksfh.registerMessageHook(msg => {
