@@ -1,3 +1,4 @@
+import _ from 'lodash';
 import path from 'path';
 
 import { Model, CodeEditor } from '../packages/vuebook/src';
@@ -12,13 +13,14 @@ import { JupyterSubprocess } from './backend/slave-process';
 import { JupyterHosts } from './backend/hosts';
 import { JupyterAutocomplete } from './autocomplete';
 import { JsInterpreter } from './backend/interp-js';
+import * as langJs from './frontend/lang-js';
+import { ApplicationWindows } from './frontend/app-windows';
+import { imap } from './infra/itertools';
 import atexit from './infra/atexit';
 
 // Extension components
 import Grid from './components/grid';
-import { ApplicationWindows } from './frontend/app-windows';
-import { imap } from './infra/itertools';
-import _ from 'lodash';
+import HtmlEmbed from './components/viz/html-embed.vue';
 import { CrossDeps } from './frontend/dependencies';
 
 
@@ -74,6 +76,8 @@ class IDE {
     }
 
     registerComponents() {
+        langJs.install();
+        this.app.instance.component('HTMLEmbed', HtmlEmbed)
         this.app.instance.component('Grid', Grid)
     }
 

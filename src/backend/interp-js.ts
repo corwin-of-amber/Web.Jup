@@ -46,6 +46,17 @@ class JsInterpreter {
     }
 
     private formatResult(value: any): IMimeBundle {
+        if (value instanceof HTMLElement) {
+            return {'application/vue3': {
+                is: 'HTMLEmbed',
+                props: {element: value as any}
+            }};
+        }
+        if (typeof value === 'object') {
+            let s = `${value.constructor.name} {${
+                Object.keys(value).map(k => `${k}: ..`).join(', ')}}`
+            return {'text/plain': s};    
+        }
         return {'text/plain': value.toString()};
     }
 
@@ -76,12 +87,15 @@ namespace Preprocess {
         return blk.length == 2 ? blk : undefined;
     }
 
+    /** Heuristic to detect an object literal based on the first few tokens */
     export function isObjectLiteral(js: string) {
         let pat = OBJECT_LITERAL_PAT, state = 0;
         for (let tok of jstokens(js)) {
             if (tok.type == 'WhiteSpace') continue;
-            if (pat[state](tok)) state++; else return false;
-            if (state >= pat.length) return true;
+            if (pat[state](tok)) {
+                if (++state >= pat.length) return true;
+             }
+             else return false;
         }
         return false;
     }
@@ -92,9 +106,9 @@ namespace Preprocess {
     }
 
     const OBJECT_LITERAL_PAT: ((t: jstokens.Token) => boolean)[] = [
-        (t => t.value == '{'), 
-        (t => t.type == 'IdentifierName'),
-        (t => t.value == ':')
+        (t => '{' == t.value), 
+        (t => ['IdentifierName', 'StringLiteral'].includes(t.type)),
+        (t => ':' == t.value)
     ];
 
 }
